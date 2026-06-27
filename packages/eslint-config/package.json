@@ -1,0 +1,16 @@
+{
+  "name": "@backgammon/eslint-config",
+  "version": "0.0.0",
+  "private": true,
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "dependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0"
+  },
+  "peerDependencies": {
+    "eslint": "^8.0.0"
+  }
+}

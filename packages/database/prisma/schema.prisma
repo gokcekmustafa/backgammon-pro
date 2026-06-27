@@ -1,0 +1,378 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ──────────────────────────────────────────────────────────────────────
+
+enum PlayerType {
+  user
+  guest
+
+  @@map("player_type")
+}
+
+enum RatingType {
+  standard
+  tournament
+  speed
+
+  @@map("rating_type")
+}
+
+enum TableStatus {
+  open
+  occupied
+  playing
+  closed
+
+  @@map("table_status")
+}
+
+enum MatchStatus {
+  pending
+  in_progress
+  completed
+  cancelled
+  abandoned
+
+  @@map("match_status")
+}
+
+enum GameState {
+  not_started
+  in_progress
+  finished
+  cancelled
+  abandoned
+
+  @@map("game_state")
+}
+
+enum CheckerColor {
+  white
+  black
+
+  @@map("checker_color")
+}
+
+enum WinType {
+  normal
+  gammon
+  backgammon
+  resignation
+  timeout
+
+  @@map("win_type")
+}
+
+enum ChatScopeType {
+  room
+  table
+
+  @@map("chat_scope_type")
+}
+
+enum MessageType {
+  text
+  system
+  roll
+  move
+  join
+  leave
+
+  @@map("message_type")
+}
+
+// ── Models ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id              String    @id @default(uuid()) @db.Uuid
+  email           String    @unique(map: "users_email_idx") @db.VarChar(255)
+  passwordHash    String    @map("password_hash") @db.VarChar(255)
+  username        String    @unique(map: "users_username_idx") @db.VarChar(50)
+  displayName     String    @map("display_name") @db.VarChar(100)
+  isActive        Boolean   @default(true) @map("is_active")
+  emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz()
+  lastLoginAt     DateTime? @map("last_login_at") @db.Timestamptz()
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  profile         Profile?
+  convertedGuests GuestUser[] @relation("GuestUserConversion")
+
+  @@index([createdAt], map: "users_created_at_idx")
+  @@index([isActive], map: "users_is_active_idx")
+  @@map("Users")
+}
+
+model GuestUser {
+  id              String    @id @default(uuid()) @db.Uuid
+  displayName     String    @map("display_name") @db.VarChar(50)
+  convertedUserId String?  @map("converted_user_id") @db.Uuid
+  lastSeenAt      DateTime  @default(now()) @map("last_seen_at") @db.Timestamptz()
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  convertedUser User? @relation("GuestUserConversion", fields: [convertedUserId], references: [id], onDelete: SetNull, map: "fk_guest_users_converted_user")
+
+  @@index([convertedUserId], map: "guest_users_converted_idx")
+  @@index([lastSeenAt], map: "guest_users_last_seen_idx")
+  @@index([createdAt], map: "guest_users_created_at_idx")
+  @@map("GuestUsers")
+}
+
+model Profile {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @unique(map: "profiles_user_id_idx") @map("user_id") @db.Uuid
+  avatarUrl   String?  @map("avatar_url") @db.VarChar(500)
+  bio         String?  @db.Text
+  location    String?  @db.VarChar(100)
+  preferences Json     @default("{}") @db.JsonB
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, map: "fk_profiles_user")
+
+  @@map("Profiles")
+}
+
+model Rating {
+  id          String     @id @default(uuid()) @db.Uuid
+  playerType  PlayerType @map("player_type")
+  playerId    String     @map("player_id") @db.Uuid
+  ratingType  RatingType @default(standard) @map("rating_type")
+  rating      Int        @default(1200)
+  peakRating  Int        @default(1200) @map("peak_rating")
+  gamesPlayed Int        @default(0) @map("games_played")
+  wins        Int        @default(0)
+  losses      Int        @default(0)
+  draws       Int        @default(0)
+  updatedAt   DateTime   @default(now()) @map("updated_at") @db.Timestamptz()
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@unique([playerType, playerId, ratingType], map: "ratings_player_idx")
+  @@index([ratingType, rating(sort: Desc)], map: "ratings_leaderboard_idx")
+  @@index([playerType, playerId], map: "ratings_player_lookup_idx")
+  @@index([updatedAt], map: "ratings_updated_at_idx")
+  @@map("Ratings")
+}
+
+model Room {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(100)
+  slug        String   @unique(map: "rooms_slug_idx") @db.VarChar(100)
+  description String?  @db.Text
+  minRating   Int?     @map("min_rating")
+  maxRating   Int?     @map("max_rating")
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  tables Table[]
+
+  @@index([isActive, sortOrder], map: "rooms_active_order_idx")
+  @@map("Rooms")
+}
+
+model Table {
+  id          String      @id @default(uuid()) @db.Uuid
+  roomId      String      @map("room_id") @db.Uuid
+  name        String?     @db.VarChar(100)
+  status      TableStatus @default(open)
+  isRanked    Boolean     @default(true) @map("is_ranked")
+  matchLength Int         @default(1) @map("match_length")
+  stakes      Int?
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz()
+  startedAt   DateTime?   @map("started_at") @db.Timestamptz()
+  closedAt    DateTime?   @map("closed_at") @db.Timestamptz()
+  updatedAt   DateTime    @updatedAt @map("updated_at") @db.Timestamptz()
+
+  room         Room               @relation(fields: [roomId], references: [id], onDelete: Restrict, map: "fk_tables_room")
+  participants TableParticipant[]
+  matches      Match[]
+
+  @@index([roomId, status], map: "tables_room_status_idx")
+  @@index([status], map: "tables_status_idx")
+  @@index([roomId, createdAt(sort: Desc)], map: "tables_created_at_idx")
+  @@map("Tables")
+}
+
+model TableParticipant {
+  id         String    @id @default(uuid()) @db.Uuid
+  tableId    String    @map("table_id") @db.Uuid
+  playerType PlayerType @map("player_type")
+  playerId   String    @map("player_id") @db.Uuid
+  position   Int
+  joinedAt   DateTime  @default(now()) @map("joined_at") @db.Timestamptz()
+  leftAt     DateTime? @map("left_at") @db.Timestamptz()
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  table Table @relation(fields: [tableId], references: [id], onDelete: Cascade, map: "fk_table_participants_table")
+
+  @@unique([tableId, position], map: "table_participants_table_pos_idx")
+  @@index([tableId, leftAt], map: "table_participants_active_idx")
+  @@index([playerType, playerId], map: "table_participants_player_idx")
+  @@map("TableParticipants")
+}
+
+model Match {
+  id               String      @id @default(uuid()) @db.Uuid
+  tableId          String      @map("table_id") @db.Uuid
+  status           MatchStatus @default(pending)
+  totalGames       Int         @default(1) @map("total_games")
+  maxScore         Int?        @map("max_score")
+  winnerPlayerType PlayerType? @map("winner_player_type")
+  winnerPlayerId   String?     @map("winner_player_id") @db.Uuid
+  scorePlayer1     Int         @default(0) @map("score_player_1")
+  scorePlayer2     Int         @default(0) @map("score_player_2")
+  startedAt        DateTime?   @map("started_at") @db.Timestamptz()
+  completedAt      DateTime?   @map("completed_at") @db.Timestamptz()
+  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt        DateTime    @updatedAt @map("updated_at") @db.Timestamptz()
+
+  table          Table              @relation(fields: [tableId], references: [id], onDelete: Restrict, map: "fk_matches_table")
+  participants   MatchParticipant[]
+  games          Game[]
+
+  @@index([tableId], map: "matches_table_id_idx")
+  @@index([status], map: "matches_status_idx")
+  @@index([winnerPlayerType, winnerPlayerId], map: "matches_player_idx")
+  @@index([tableId, startedAt(sort: Desc)], map: "matches_started_at_idx")
+  @@map("Matches")
+}
+
+model MatchParticipant {
+  id         String     @id @default(uuid()) @db.Uuid
+  matchId    String     @map("match_id") @db.Uuid
+  playerType PlayerType @map("player_type")
+  playerId   String     @map("player_id") @db.Uuid
+  position   Int
+  isWinner   Boolean    @default(false) @map("is_winner")
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt  DateTime   @updatedAt @map("updated_at") @db.Timestamptz()
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade, map: "fk_match_participants_match")
+
+  @@unique([matchId, position], map: "match_participants_match_pos_idx")
+  @@index([playerType, playerId], map: "match_participants_player_idx")
+  @@index([playerType, playerId, isWinner], map: "match_participants_wins_idx")
+  @@map("MatchParticipants")
+}
+
+model Game {
+  id                   String     @id @default(uuid()) @db.Uuid
+  matchId              String     @map("match_id") @db.Uuid
+  gameNumber           Int        @map("game_number")
+  state                GameState  @default(not_started)
+  currentTurnPosition  Int?       @map("current_turn_position")
+  diceRoll             Json?      @map("dice_roll") @db.JsonB
+  boardState           Json?      @map("board_state") @db.JsonB
+  moveCount            Int        @default(0) @map("move_count")
+  isDoubleCubeActive   Boolean    @default(false) @map("is_double_cube_active")
+  doubleCubePosition   Int?       @map("double_cube_position")
+  doubleCubeValue      Int?       @map("double_cube_value")
+  winnerPlayerType     PlayerType? @map("winner_player_type")
+  winnerPlayerId       String?    @map("winner_player_id") @db.Uuid
+  winType              WinType?   @map("win_type")
+  winValue             Int        @default(1) @map("win_value")
+  startedAt            DateTime?  @map("started_at") @db.Timestamptz()
+  finishedAt           DateTime?  @map("finished_at") @db.Timestamptz()
+  createdAt            DateTime   @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt            DateTime   @updatedAt @map("updated_at") @db.Timestamptz()
+
+  match        Match             @relation(fields: [matchId], references: [id], onDelete: Cascade, map: "fk_games_match")
+  participants GameParticipant[]
+  moves        Move[]
+
+  @@unique([matchId, gameNumber], map: "games_match_game_idx")
+  @@index([state], map: "games_state_idx")
+  @@index([matchId, state], map: "games_match_state_idx")
+  @@map("Games")
+}
+
+model GameParticipant {
+  id         String       @id @default(uuid()) @db.Uuid
+  gameId     String       @map("game_id") @db.Uuid
+  playerType PlayerType   @map("player_type")
+  playerId   String       @map("player_id") @db.Uuid
+  position   Int
+  color      CheckerColor
+  isWinner   Boolean      @default(false) @map("is_winner")
+  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt  DateTime     @updatedAt @map("updated_at") @db.Timestamptz()
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade, map: "fk_game_participants_game")
+
+  @@unique([gameId, position], map: "game_participants_game_pos_idx")
+  @@index([playerType, playerId], map: "game_participants_player_idx")
+  @@map("GameParticipants")
+}
+
+model Move {
+  id             String   @id @default(uuid()) @db.Uuid
+  gameId         String   @map("game_id") @db.Uuid
+  moveNumber     Int      @map("move_number")
+  playerPosition Int      @map("player_position")
+  diceRoll       Json     @map("dice_roll") @db.JsonB
+  isDouble       Boolean  @default(false) @map("is_double")
+  fromPositions  Json?    @map("from_positions") @db.JsonB
+  toPositions    Json?    @map("to_positions") @db.JsonB
+  isBearOff      Boolean  @default(false) @map("is_bear_off")
+  isHit          Boolean  @default(false) @map("is_hit")
+  boardSnapshot  Json?    @map("board_snapshot") @db.JsonB
+  metadata       Json?    @db.JsonB
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade, map: "fk_moves_game")
+
+  @@unique([gameId, moveNumber], map: "moves_game_move_idx")
+  @@index([gameId, createdAt], map: "moves_game_chrono_idx")
+  @@index([gameId, playerPosition], map: "moves_player_idx")
+  @@map("Moves")
+}
+
+model ChatMessage {
+  id               String         @id @default(uuid()) @db.Uuid
+  scopeType        ChatScopeType  @map("scope_type")
+  scopeId          String         @map("scope_id") @db.Uuid
+  senderPlayerType PlayerType?    @map("sender_player_type")
+  senderPlayerId   String?        @map("sender_player_id") @db.Uuid
+  messageType      MessageType    @default(text) @map("message_type")
+  content          String         @db.Text
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([scopeType, scopeId, createdAt(sort: Desc)], map: "chat_scope_chrono_idx")
+  @@index([senderPlayerType, senderPlayerId], map: "chat_sender_idx")
+  @@index([createdAt], map: "chat_created_at_idx")
+  @@map("ChatMessages")
+}
+
+model Session {
+  id             String     @id @default(uuid()) @db.Uuid
+  playerType     PlayerType @map("player_type")
+  playerId       String     @map("player_id") @db.Uuid
+  token          String     @unique(map: "sessions_token_idx") @db.VarChar(512)
+  tokenFamily    String?    @map("token_family") @db.VarChar(100)
+  ipAddress      String?    @map("ip_address") @db.Inet
+  userAgent      String?    @map("user_agent") @db.Text
+  isActive       Boolean    @default(true) @map("is_active")
+  expiresAt      DateTime   @map("expires_at") @db.Timestamptz()
+  lastAccessedAt DateTime   @default(now()) @map("last_accessed_at") @db.Timestamptz()
+  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt      DateTime   @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([playerType, playerId], map: "sessions_player_idx")
+  @@index([playerType, playerId, isActive], map: "sessions_active_player_idx")
+  @@index([expiresAt], map: "sessions_expires_idx")
+  @@index([lastAccessedAt], map: "sessions_last_access_idx")
+  @@map("Sessions")
+}

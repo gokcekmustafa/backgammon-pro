@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.game-table-normal { display: flex; }
+.game-table-rotate { display: none; }
+
+@media (max-width: 480px) and (orientation: portrait) {
+  .game-table-rotate { display: flex; }
+  .game-table-normal { display: none; }
+}
