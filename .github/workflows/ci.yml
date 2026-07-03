@@ -63,10 +63,6 @@ jobs:
           DATABASE_URL: postgres://backgammon:backgammon@localhost:5432/backgammon
           JWT_SECRET: test-secret
           JWT_REFRESH_SECRET: test-refresh-secret
-        env:
-          DATABASE_URL: postgres://backgammon:backgammon@localhost:5432/backgammon
-          JWT_SECRET: test-secret
-          JWT_REFRESH_SECRET: test-refresh-secret
 
       - name: Log in to GitHub Container Registry
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
