@@ -49,6 +49,11 @@ jobs:
         env:
           DATABASE_URL: postgres://backgammon:backgammon@localhost:5432/backgammon
 
+      - name: Build workspace packages
+        run: pnpm -r run build
+        env:
+          DATABASE_URL: postgres://backgammon:backgammon@localhost:5432/backgammon
+
       - name: Lint
         run: pnpm run lint
 
@@ -58,9 +63,6 @@ jobs:
           DATABASE_URL: postgres://backgammon:backgammon@localhost:5432/backgammon
           JWT_SECRET: test-secret
           JWT_REFRESH_SECRET: test-refresh-secret
-
-      - name: Build
-        run: pnpm run build
         env:
           DATABASE_URL: postgres://backgammon:backgammon@localhost:5432/backgammon
           JWT_SECRET: test-secret
