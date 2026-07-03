@@ -3,6 +3,8 @@ import { CLIENT_MESSAGE_TYPES, createServerMessage } from './types';
 import type { ConnectionManager } from './connection-manager';
 import type { RoomManager } from './room-manager';
 import type { TableManager } from './table-manager';
+import type { GameSessionManager } from './game-session-manager';
+import { ChatManager } from './chat-manager';
 
 type MessageHandler = (
   connectionId: string,
@@ -16,6 +18,8 @@ export class EventDispatcher {
     private connections: ConnectionManager,
     private rooms: RoomManager,
     private tables: TableManager,
+    private chat: ChatManager,
+    private gameSessions?: GameSessionManager,
   ) {
     this.registerDefaults();
   }
@@ -37,29 +41,36 @@ export class EventDispatcher {
     this.handlers.delete(type);
   }
 
+  private sendError(connectionId: string, message: string): void {
+    const conn = this.connections.get(connectionId);
+    if (conn) {
+      conn.send(createServerMessage('ERROR', { message }));
+    }
+  }
+
   dispatch(connectionId: string, message: ClientMessage): ServerMessage | void {
     if (!CLIENT_MESSAGE_TYPES.includes(message.type)) {
-      const conn = this.connections.get(connectionId);
-      if (conn) {
-        conn.send(
-          createServerMessage('ERROR', {
-            message: `Unknown message type: ${message.type}`,
-          }),
-        );
-      }
+      this.sendError(connectionId, `Unknown message type: ${message.type}`);
+      return;
+    }
+
+    if (this.connections.isRateLimited(connectionId)) {
+      this.sendError(connectionId, 'Rate limited. Slow down.');
+      return;
+    }
+
+    if (
+      message.type !== 'AUTHENTICATE' &&
+      message.type !== 'PING' &&
+      !this.connections.isAuthenticated(connectionId)
+    ) {
+      this.sendError(connectionId, 'Authenticate before sending messages');
       return;
     }
 
     const handler = this.handlers.get(message.type);
     if (!handler) {
-      const conn = this.connections.get(connectionId);
-      if (conn) {
-        conn.send(
-          createServerMessage('ERROR', {
-            message: `No handler registered for: ${message.type}`,
-          }),
-        );
-      }
+      this.sendError(connectionId, `No handler registered for: ${message.type}`);
       return;
     }
 
@@ -77,6 +88,8 @@ export class EventDispatcher {
         return;
       }
       this.rooms.join(connectionId, roomId);
+      const username = (payload?.username as string) ?? 'A user';
+      this.chat.addSystemMessage(`${username} joined the room`, roomId, null);
     });
 
     this.on('LEAVE_ROOM', (connectionId, payload) => {
@@ -88,7 +101,9 @@ export class EventDispatcher {
         }
         return;
       }
+      const username = (payload?.username as string) ?? 'A user';
       this.rooms.leave(connectionId, roomId);
+      this.chat.addSystemMessage(`${username} left the room`, roomId, null);
     });
   }
 
@@ -131,69 +146,55 @@ export class EventDispatcher {
     });
   }
 
-  registerChatHandler(): void {
+  registerChatHandlers(): void {
     this.on('CHAT_MESSAGE', (connectionId, payload) => {
-      const roomId = payload?.roomId as string | undefined;
-      const content = payload?.content as string | undefined;
-      const tableId = payload?.tableId as string | undefined;
+      this.chat.handleChatMessage(connectionId, payload ?? {});
+    });
+  }
 
-      if (!content) {
-        const conn = this.connections.get(connectionId);
-        if (conn) {
-          conn.send(createServerMessage('ERROR', { message: 'CHAT_MESSAGE requires content' }));
-        }
-        return;
-      }
+  registerChatHandler(): void {
+    this.registerChatHandlers();
+  }
 
-      const scope = tableId ?? roomId;
-      if (!scope) {
+  registerGameHandlers(): void {
+    if (!this.gameSessions) return;
+
+    this.on('ROLL_DICE', (connectionId) => {
+      this.gameSessions!.handleRoll(connectionId);
+    });
+
+    this.on('MAKE_MOVE', (connectionId, payload) => {
+      const from = payload?.from as number | undefined;
+      const to = payload?.to as number | undefined;
+      const diceUsed = payload?.diceUsed as number | undefined;
+      if (from === undefined || to === undefined || diceUsed === undefined) {
         const conn = this.connections.get(connectionId);
         if (conn) {
           conn.send(
-            createServerMessage('ERROR', { message: 'CHAT_MESSAGE requires roomId or tableId' }),
+            createServerMessage('ERROR', { message: 'MAKE_MOVE requires from, to, diceUsed' }),
           );
         }
         return;
       }
+      this.gameSessions!.handleMove(connectionId, from, to, diceUsed);
+    });
 
-      const broadcastMessage = createServerMessage('CHAT_MESSAGE', {
-        connectionId,
-        content,
-        scope,
-        scopeType: tableId ? 'table' : 'room',
-      });
+    this.on('RESIGN_GAME', (connectionId) => {
+      this.gameSessions!.handleResign(connectionId);
+    });
 
-      let recipients: string[] = [];
-
-      if (tableId) {
-        const table = this.tables.get(tableId);
-        if (table) recipients = table.connectionIds;
-      } else if (roomId) {
-        const room = this.rooms.get(roomId);
-        if (room) recipients = room.connectionIds;
-      }
-
-      this.connections.broadcastTo(recipients, broadcastMessage);
+    this.on('RECONNECT_GAME', (connectionId) => {
+      this.gameSessions!.handleReconnect(connectionId);
     });
   }
 
   handleDisconnect(connectionId: string): void {
-    this.rooms.leaveAll(connectionId);
-
-    const tableIds = this.tables.getConnectionTables(connectionId);
-    this.tables.leaveAll(connectionId);
-
-    for (const tableId of tableIds) {
-      const table = this.tables.get(tableId);
-      if (table) {
-        this.connections.broadcastTo(
-          table.connectionIds,
-          createServerMessage('DISCONNECTED', { connectionId }),
-        );
-      }
+    if (this.gameSessions) {
+      this.gameSessions.handleDisconnect(connectionId);
     }
 
     const roomIds = this.rooms.getConnectionRooms(connectionId);
+    this.rooms.leaveAll(connectionId);
     for (const roomId of roomIds) {
       const room = this.rooms.get(roomId);
       if (room) {
@@ -201,6 +202,20 @@ export class EventDispatcher {
           room.connectionIds,
           createServerMessage('DISCONNECTED', { connectionId }),
         );
+        this.chat.addSystemMessage('A user disconnected', roomId, null);
+      }
+    }
+
+    const tableIds = this.tables.getConnectionTables(connectionId);
+    this.tables.leaveAll(connectionId);
+    for (const tableId of tableIds) {
+      const table = this.tables.get(tableId);
+      if (table) {
+        this.connections.broadcastTo(
+          table.connectionIds,
+          createServerMessage('DISCONNECTED', { connectionId }),
+        );
+        this.chat.addSystemMessage('A user disconnected', null, tableId);
       }
     }
   }

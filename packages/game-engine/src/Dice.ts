@@ -2,9 +2,6 @@ import type { DiceRoll } from './types';
 
 export const DICE_MIN = 1;
 export const DICE_MAX = 6;
-export const DICE_COUNT = 2;
-export const DOUBLES_MULTIPLIER = 2;
-export const DOUBLES_DIE_COUNT = 4;
 
 function randomDie(): number {
   return Math.floor(Math.random() * DICE_MAX) + DICE_MIN;
@@ -32,7 +29,7 @@ export function rollDiceSeeded(seed: number): DiceRoll {
 }
 
 export function rollSpecificDice(d1: number, d2: number): DiceRoll {
-  return { die1: d1, die2: d2, isDouble: d1 === d2 };
+  return createDiceRoll(d1, d2);
 }
 
 export function getDiceValues(roll: DiceRoll): number[] {
@@ -49,7 +46,7 @@ export function getUniqueDiceValues(roll: DiceRoll): number[] {
   if (roll.die1 === roll.die2) {
     return [roll.die1];
   }
-  return [roll.die1, roll.die2].filter((v, i, a) => a.indexOf(v) === i);
+  return [roll.die1, roll.die2];
 }
 
 export function removeDie(values: number[], dieValue: number): number[] {

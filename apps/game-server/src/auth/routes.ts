@@ -3,6 +3,8 @@ import type { PrismaClient } from '@backgammon/database';
 import { randomUUID } from 'crypto';
 import { comparePassword, hashPassword } from '../lib/password';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../lib/jwt';
+import { validateBody } from '../api/validate';
+import { loginSchema, guestLoginSchema, refreshSchema, logoutSchema } from '../api/validation';
 
 export interface LoginBody {
   email?: string;
@@ -189,23 +191,39 @@ export async function logoutHandler(prisma: PrismaClient, body: LogoutBody) {
 }
 
 export function registerAuthRoutes(app: FastifyInstance, prisma: PrismaClient): void {
-  app.post('/auth/login', async (request: FastifyRequest, reply: FastifyReply) => {
-    const result = await loginHandler(prisma, request.body as LoginBody);
-    return reply.status(result.status).send(result.body);
-  });
+  app.post(
+    '/auth/login',
+    { preHandler: [validateBody(loginSchema)] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const result = await loginHandler(prisma, request.body as LoginBody);
+      return reply.status(result.status).send(result.body);
+    },
+  );
 
-  app.post('/auth/guest-login', async (request: FastifyRequest, reply: FastifyReply) => {
-    const result = await guestLoginHandler(prisma, request.body as GuestLoginBody);
-    return reply.status(result.status).send(result.body);
-  });
+  app.post(
+    '/auth/guest-login',
+    { preHandler: [validateBody(guestLoginSchema)] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const result = await guestLoginHandler(prisma, request.body as GuestLoginBody);
+      return reply.status(result.status).send(result.body);
+    },
+  );
 
-  app.post('/auth/refresh', async (request: FastifyRequest, reply: FastifyReply) => {
-    const result = await refreshHandler(prisma, request.body as RefreshBody);
-    return reply.status(result.status).send(result.body);
-  });
+  app.post(
+    '/auth/refresh',
+    { preHandler: [validateBody(refreshSchema)] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const result = await refreshHandler(prisma, request.body as RefreshBody);
+      return reply.status(result.status).send(result.body);
+    },
+  );
 
-  app.post('/auth/logout', async (request: FastifyRequest, reply: FastifyReply) => {
-    const result = await logoutHandler(prisma, request.body as LogoutBody);
-    return reply.status(result.status).send(result.body);
-  });
+  app.post(
+    '/auth/logout',
+    { preHandler: [validateBody(logoutSchema)] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const result = await logoutHandler(prisma, request.body as LogoutBody);
+      return reply.status(result.status).send(result.body);
+    },
+  );
 }

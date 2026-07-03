@@ -1,7 +1,6 @@
 export type {
   PointDirection,
   Point,
-  Size,
   Rect,
   Circle,
   PointGeometry,

@@ -8,12 +8,7 @@ import type {
   CheckerPlacement,
   RenderOptions,
 } from './types';
-import {
-  getTrianglePoints,
-  trianglePointsToString,
-  getCheckerPositions,
-  computeCheckerDiameter,
-} from './Geometry';
+import { getTrianglePoints, trianglePointsToString, getCheckerPositions } from './Geometry';
 
 export const DEFAULT_COLORS: ColorScheme = {
   boardFill: '#1a5c2a',

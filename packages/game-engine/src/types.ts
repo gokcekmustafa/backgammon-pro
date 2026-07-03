@@ -122,27 +122,10 @@ export interface MoveValidator {
   hasLegalMoves(state: GameState): boolean;
 }
 
-export interface GameResult {
-  winner: Player | null;
-  winType: WinType | null;
-  winValue: number;
-  isComplete: boolean;
-}
-
 export function opponent(player: Player): Player {
   return player === Player.One ? Player.Two : Player.One;
 }
 
-export function isPlayerIndex(value: number): value is 0 | 1 {
-  return value === 0 || value === 1;
-}
-
 export function playerToIndex(player: Player): 0 | 1 {
   return player === Player.One ? 0 : 1;
-}
-
-export function indexToPlayer(index: number): Player {
-  if (index === 0) return Player.One;
-  if (index === 1) return Player.Two;
-  throw new Error(`Invalid player index: ${index}`);
 }

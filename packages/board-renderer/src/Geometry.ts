@@ -11,10 +11,6 @@ export function rect(x: number, y: number, width: number, height: number): Rect 
   return { x, y, width, height };
 }
 
-export function size(width: number, height: number): { width: number; height: number } {
-  return { width, height };
-}
-
 export function createBoardGeometry(boardWidth: number, boardHeight?: number): BoardGeometry {
   const height = boardHeight ?? boardWidth / DEFAULT_BOARD_ASPECT_RATIO;
 

@@ -5,7 +5,12 @@ export type ClientMessageType =
   | 'JOIN_TABLE'
   | 'LEAVE_TABLE'
   | 'CHAT_MESSAGE'
-  | 'PING';
+  | 'PING'
+  | 'AUTHENTICATE'
+  | 'ROLL_DICE'
+  | 'MAKE_MOVE'
+  | 'RESIGN_GAME'
+  | 'RECONNECT_GAME';
 
 export const CLIENT_MESSAGE_TYPES: readonly ClientMessageType[] = [
   'JOIN_ROOM',
@@ -15,6 +20,11 @@ export const CLIENT_MESSAGE_TYPES: readonly ClientMessageType[] = [
   'LEAVE_TABLE',
   'CHAT_MESSAGE',
   'PING',
+  'AUTHENTICATE',
+  'ROLL_DICE',
+  'MAKE_MOVE',
+  'RESIGN_GAME',
+  'RECONNECT_GAME',
 ];
 
 export type ServerMessageType =
@@ -29,7 +39,16 @@ export type ServerMessageType =
   | 'PONG'
   | 'ERROR'
   | 'ROOM_UPDATE'
-  | 'TABLE_UPDATE';
+  | 'TABLE_UPDATE'
+  | 'AUTHENTICATED'
+  | 'GAME_STATE_SYNC'
+  | 'GAME_DICE_ROLLED'
+  | 'GAME_MOVE_MADE'
+  | 'GAME_MOVE_REJECTED'
+  | 'GAME_RESIGNED'
+  | 'GAME_OVER'
+  | 'OPPONENT_DISCONNECTED'
+  | 'OPPONENT_RECONNECTED';
 
 export interface ClientMessage {
   type: ClientMessageType;

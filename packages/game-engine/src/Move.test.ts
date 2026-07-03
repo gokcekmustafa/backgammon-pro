@@ -3,6 +3,7 @@ import {
   createMove,
   isBarMove,
   isBearOffMove,
+  moveUsesDie,
   createBarMove,
   createBearOffMove,
   applyMove,
@@ -51,6 +52,16 @@ describe('createBarMove', () => {
     expect(move.to).toBe(10);
     expect(move.diceUsed).toBe(3);
     expect(move.player).toBe(P1);
+  });
+});
+
+describe('moveUsesDie', () => {
+  it('returns true when diceUsed matches', () => {
+    expect(moveUsesDie(createMove(5, 10, 4, P1), 4)).toBe(true);
+  });
+
+  it('returns false when diceUsed does not match', () => {
+    expect(moveUsesDie(createMove(5, 10, 4, P1), 3)).toBe(false);
   });
 });
 
@@ -154,6 +165,39 @@ describe('applyMove', () => {
     expect(next.board[9].count).toBe(3);
     expect(next.players[1].checkersOnBar).toBe(0);
   });
+
+  it('removes only one checker from source point', () => {
+    const state = createEmptyState();
+    state.board[5] = { player: P1, count: 5 };
+    state.remainingDice = [4];
+
+    const next = applyMove(state, createMove(5, 9, 4, P1));
+    expect(next.board[5].count).toBe(4);
+    expect(next.board[5].player).toBe(P1);
+  });
+
+  it('clears source point player when last checker removed', () => {
+    const state = createEmptyState();
+    state.board[5] = { player: P1, count: 1 };
+    state.remainingDice = [4];
+
+    const next = applyMove(state, createMove(5, 9, 4, P1));
+    expect(next.board[5].count).toBe(0);
+    expect(next.board[5].player).toBeNull();
+  });
+
+  it('hits opponent blot from bar entry', () => {
+    const state = createEmptyState();
+    state.players[0].checkersOnBar = 1;
+    state.board[0] = { player: P2, count: 1 };
+    state.remainingDice = [1];
+
+    const next = applyMove(state, createBarMove(0, 1, P1));
+    expect(next.players[0].checkersOnBar).toBe(0);
+    expect(next.board[0].player).toBe(P1);
+    expect(next.board[0].count).toBe(1);
+    expect(next.players[1].checkersOnBar).toBe(1);
+  });
 });
 
 describe('undoMove', () => {
@@ -245,5 +289,38 @@ describe('undoMove', () => {
     undoMove(applied, createMove(5, 9, 4, P1));
 
     expect(state.board[5].count).toBe(stateBefore.board[5].count);
+  });
+
+  it('reverses a bar entry with hit', () => {
+    const state = createEmptyState();
+    state.players[0].checkersOnBar = 1;
+    state.board[0] = { player: P2, count: 1 };
+    state.remainingDice = [1];
+
+    const applied = applyMove(state, createBarMove(0, 1, P1));
+    const hitMove = createMove(-1, 0, 1, P1, true);
+    const undone = undoMove(applied, hitMove);
+
+    expect(undone.players[0].checkersOnBar).toBe(1);
+    expect(undone.board[0].player).toBe(P2);
+    expect(undone.board[0].count).toBe(1);
+    expect(undone.players[1].checkersOnBar).toBe(0);
+  });
+
+  it('does not restore blot when wasHit flag is not set', () => {
+    const state = createEmptyState();
+    state.board[5] = { player: P1, count: 3 };
+    state.board[9] = { player: P2, count: 1 };
+    state.remainingDice = [4];
+
+    const applied = applyMove(state, createMove(5, 9, 4, P1));
+    const undone = undoMove(applied, createMove(5, 9, 4, P1));
+
+    // Without wasHit flag, undoMove cannot know to restore the blot
+    // P1 checker is removed from destination, blot not restored, P2 stays on bar
+    expect(undone.board[5].count).toBe(3);
+    expect(undone.board[9].count).toBe(0);
+    expect(undone.board[9].player).toBeNull();
+    expect(undone.players[1].checkersOnBar).toBe(1);
   });
 });

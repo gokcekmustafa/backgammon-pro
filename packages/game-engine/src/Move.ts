@@ -1,5 +1,5 @@
 import type { GameState, Move, Player } from './types';
-import { Player as P, playerToIndex, opponent } from './types';
+import { playerToIndex, opponent } from './types';
 import { cloneState } from './GameState';
 import { removeDie } from './Dice';
 

@@ -7,15 +7,21 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsup",
     "start": "node dist/index.js",
+    "seed": "tsx src/seed.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
     "@backgammon/database": "workspace:*",
+    "@backgammon/game-engine": "workspace:*",
+    "@fastify/cors": "^11.2.0",
+    "@fastify/helmet": "^13.0.2",
+    "@fastify/rate-limit": "^11.1.0",
     "bcryptjs": "^2.4.3",
     "fastify": "^4.28.0",
     "jsonwebtoken": "^9.0.0",
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@backgammon/config": "workspace:*",

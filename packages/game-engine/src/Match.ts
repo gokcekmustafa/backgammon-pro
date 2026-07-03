@@ -1,12 +1,5 @@
-import type {
-  MatchConfig,
-  MatchState,
-  MatchPlayerInfo,
-  GameRecord,
-  Player,
-  WinType,
-} from './types';
-import { MatchStatus, Player as P } from './types';
+import type { MatchConfig, MatchState, MatchPlayerInfo, GameRecord, Player } from './types';
+import { MatchStatus, WinType, Player as P } from './types';
 
 export function createMatchPlayerInfo(playerId: string | null): MatchPlayerInfo {
   return { playerId, score: 0 };
@@ -82,8 +75,8 @@ export function recordGameResult(
     games[match.currentGameIndex] = currentGame;
   }
 
-  const player1Score = match.player1.score + (winner === P.One ? 1 : 0);
-  const player2Score = match.player2.score + (winner === P.Two ? 1 : 0);
+  const player1Score = match.player1.score + (winner === P.One ? winValue : 0);
+  const player2Score = match.player2.score + (winner === P.Two ? winValue : 0);
 
   const scoreLimit = Math.ceil(match.config.totalGames / 2);
 
@@ -98,6 +91,11 @@ export function recordGameResult(
     status: isOver ? MatchStatus.Completed : match.status,
     winner: matchWinner,
   };
+}
+
+export function resignInMatch(match: MatchState, resigningPlayer: Player): MatchState {
+  const winner = resigningPlayer === P.One ? P.Two : P.One;
+  return recordGameResult(match, winner, WinType.Resignation, 1);
 }
 
 export function isMatchOver(match: MatchState): boolean {

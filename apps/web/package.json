@@ -6,11 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "vitest run"
   },
   "dependencies": {
     "@backgammon/board-renderer": "workspace:*",
-    "@backgammon/layout-engine": "workspace:*",
+    "@backgammon/game-engine": "workspace:*",
+    "@tanstack/react-query": "^5.0.0",
     "next": "^14.2.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0"
@@ -23,6 +25,7 @@
     "autoprefixer": "^10.4.0",
     "postcss": "^8.4.0",
     "tailwindcss": "^3.4.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
   }
 }

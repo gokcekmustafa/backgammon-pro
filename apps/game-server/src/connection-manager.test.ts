@@ -107,4 +107,56 @@ describe('ConnectionManager', () => {
     expect(c1.sent).toHaveLength(1);
     expect(c2.sent).toHaveLength(0);
   });
+
+  // ── Security: WebSocket Rate Limiting ──────────────────────────────
+
+  it('allows up to WS_RATE_LIMIT messages per window', () => {
+    const { connection, sent } = createMockConnection();
+    sent.length = 0;
+    for (let i = 0; i < 60; i++) {
+      expect(manager.isRateLimited(connection.id)).toBe(false);
+    }
+  });
+
+  it('rate limits after exceeding WS_RATE_LIMIT messages in a window', () => {
+    const { connection, sent } = createMockConnection();
+    sent.length = 0;
+    for (let i = 0; i < 60; i++) {
+      manager.isRateLimited(connection.id);
+    }
+    expect(manager.isRateLimited(connection.id)).toBe(true);
+  });
+
+  it('resets rate limit window after time passes', () => {
+    const { connection, sent } = createMockConnection();
+    sent.length = 0;
+    for (let i = 0; i < 61; i++) {
+      manager.isRateLimited(connection.id);
+    }
+    expect(manager.isRateLimited(connection.id)).toBe(true);
+    // Simulate window reset by calling again after reset
+    const metrics = (manager as any).connectionMetrics.get(connection.id);
+    metrics.windowStart = 0; // Force window expiration
+    expect(manager.isRateLimited(connection.id)).toBe(false);
+  });
+
+  // ── Security: Authentication Checks ────────────────────────────────
+
+  it('reports unauthenticated connections correctly', () => {
+    const { connection } = createMockConnection();
+    expect(manager.isAuthenticated(connection.id)).toBe(false);
+  });
+
+  it('reports authenticated connections correctly', () => {
+    const { connection } = createMockConnection();
+    manager.bindUser(connection.id, 'user1');
+    expect(manager.isAuthenticated(connection.id)).toBe(true);
+  });
+
+  it('removes rate limit metrics on disconnect', () => {
+    const { connection } = createMockConnection();
+    manager.isRateLimited(connection.id);
+    manager.remove(connection.id);
+    expect(manager.isRateLimited(connection.id)).toBe(false);
+  });
 });

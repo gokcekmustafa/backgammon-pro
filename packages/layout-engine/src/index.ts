@@ -13,7 +13,6 @@ export type {
   BoardRegion,
   BoardLayout,
   Layout,
-  LayoutConstraints,
   LayoutOptions,
 } from './types';
 

@@ -13,9 +13,13 @@
     "@backgammon/eslint-config": "workspace:*",
     "@backgammon/prettier-config": "workspace:*",
     "eslint": "^8.57.0",
+    "eslint-config-next": "^14.2.0",
+    "eslint-plugin-react": "^7.34.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
     "husky": "^9.0.0",
     "lint-staged": "^15.2.0",
     "prettier": "^3.2.0",
+    "tsx": "^4.0.0",
     "typescript": "^5.4.0"
   },
   "lint-staged": {

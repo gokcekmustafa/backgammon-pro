@@ -1,17 +1,64 @@
+'use client';
+
+import { useGame } from '@/providers/GameProvider';
+import { Player } from '@backgammon/game-engine';
+
 interface PlayerPanelProps {
-  _side?: 'left' | 'right';
+  player: Player;
+  playerName?: string;
 }
 
-export default function PlayerPanel({ _side }: PlayerPanelProps) {
+const PLAYER_NAMES: Record<Player, string> = {
+  [Player.One]: 'Player 1',
+  [Player.Two]: 'Player 2',
+};
+
+const PLAYER_COLORS: Record<Player, string> = {
+  [Player.One]: 'bg-amber-200 border-amber-400',
+  [Player.Two]: 'bg-stone-700 border-stone-500',
+};
+
+export default function PlayerPanel({ player, playerName }: PlayerPanelProps) {
+  const { gameState } = useGame();
+  const idx = player === Player.One ? 0 : 1;
+  const barCount = gameState.players[idx].checkersOnBar;
+  const borneOff = gameState.players[idx].checkersBorneOff;
+  const isActive = gameState.currentPlayer === player;
+
+  const displayName = playerName ?? PLAYER_NAMES[player];
+
   return (
-    <div className="flex flex-col items-center gap-3 py-4 lg:py-8">
-      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-700 bg-stone-800 text-xs font-bold text-stone-500">
-        ?
+    <div
+      className={`flex flex-col items-center gap-2 py-4 lg:py-8 ${isActive ? 'opacity-100' : 'opacity-50'}`}
+    >
+      <div
+        className={`flex h-10 w-10 items-center justify-center rounded-full border-2 ${PLAYER_COLORS[player]} text-xs font-bold text-stone-900`}
+      >
+        {player === Player.One ? 'P1' : 'P2'}
       </div>
       <div className="text-center">
-        <p className="text-xs font-medium text-stone-500">Waiting for opponent</p>
-        <p className="mt-1 text-2xl font-bold tracking-tight text-stone-300">0</p>
-        <p className="text-[10px] uppercase tracking-wider text-stone-600">Score</p>
+        <p className="text-xs font-medium text-stone-400">{displayName}</p>
+        {isActive && (
+          <p
+            className="text-[10px] text-amber-500 font-semibold uppercase tracking-wider"
+            aria-live="polite"
+          >
+            Your turn
+          </p>
+        )}
+        {barCount > 0 && (
+          <p
+            className="text-[10px] text-red-400 font-semibold"
+            aria-label={`${barCount} checkers on bar`}
+          >
+            {barCount} on bar
+          </p>
+        )}
+        {borneOff > 0 && (
+          <p className="text-[10px] text-stone-500" aria-label={`${borneOff} checkers borne off`}>
+            {borneOff} borne off
+          </p>
+        )}
       </div>
     </div>
   );

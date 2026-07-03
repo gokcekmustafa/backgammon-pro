@@ -79,17 +79,6 @@ export interface Layout {
   board: BoardLayout;
 }
 
-export interface LayoutConstraints {
-  referenceWidth: number;
-  referenceHeight: number;
-  referenceBoardWidth: number;
-  boardAspectRatio: number;
-  boardOccupancyFraction: number;
-  scaleMin: number;
-  scaleMax: number;
-}
-
 export interface LayoutOptions {
   deviceType?: DeviceType;
-  constraints?: Partial<LayoutConstraints>;
 }

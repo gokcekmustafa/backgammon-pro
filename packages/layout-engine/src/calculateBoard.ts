@@ -62,20 +62,20 @@ export function calculateBoard(viewport: Viewport, deviceType?: DeviceType): Boa
     height: halfHeight,
   };
 
-  const bearingOffSideWidth = pointWidth * 0.5;
+  const bearingOffRegionHeight = pointWidth * 0.5;
 
   const bearingOffTop: BoardRegion = {
     x: 0,
     y: 0,
     width: boardWidth,
-    height: bearingOffSideWidth,
+    height: bearingOffRegionHeight,
   };
 
   const bearingOffBottom: BoardRegion = {
     x: 0,
-    y: boardHeight - bearingOffSideWidth,
+    y: boardHeight - bearingOffRegionHeight,
     width: boardWidth,
-    height: bearingOffSideWidth,
+    height: bearingOffRegionHeight,
   };
 
   return {
@@ -147,7 +147,7 @@ function calculatePoints(
 
     const rightIndex = POINTS_PER_HALF * 2 + POINTS_PER_HALF + i;
 
-    if (rightIndex < 24) {
+    if (rightIndex < POINTS_PER_HALF * 4) {
       const rightX = rightTableX + i * pointWidth;
 
       points.push({

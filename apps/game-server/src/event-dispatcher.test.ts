@@ -3,6 +3,7 @@ import { ConnectionManager } from './connection-manager';
 import { RoomManager } from './room-manager';
 import { TableManager } from './table-manager';
 import { EventDispatcher } from './event-dispatcher';
+import { ChatManager } from './chat-manager';
 import type { ServerMessage } from './types';
 
 describe('EventDispatcher', () => {
@@ -11,6 +12,8 @@ describe('EventDispatcher', () => {
   let tables: TableManager;
   let dispatcher: EventDispatcher;
 
+  let chat: ChatManager;
+
   beforeEach(() => {
     connections = new ConnectionManager();
     connections.reset();
@@ -18,11 +21,13 @@ describe('EventDispatcher', () => {
     rooms.reset();
     tables = new TableManager(connections);
     tables.reset();
-    dispatcher = new EventDispatcher(connections, rooms, tables);
+    chat = new ChatManager(connections, rooms, tables);
+    chat.reset();
+    dispatcher = new EventDispatcher(connections, rooms, tables, chat);
     dispatcher.reset();
   });
 
-  function addConn() {
+  function addConn(userId?: string) {
     const sent: ServerMessage[] = [];
     const conn = connections.add(
       (msg) => {
@@ -30,6 +35,9 @@ describe('EventDispatcher', () => {
       },
       () => {},
     );
+    if (userId) {
+      connections.bindUser(conn.id, userId);
+    }
     // Clear CONNECTED
     sent.length = 0;
     return { connection: conn, sent };
@@ -53,7 +61,7 @@ describe('EventDispatcher', () => {
 
   describe('custom handlers', () => {
     it('registers and invokes a custom handler', () => {
-      const { connection, sent } = addConn();
+      const { connection } = addConn('user1');
       let handled = false;
 
       dispatcher.on('JOIN_ROOM', (connId) => {
@@ -67,7 +75,7 @@ describe('EventDispatcher', () => {
 
     it('sends ERROR when no handler is registered', () => {
       dispatcher.reset(); // Remove non-default handlers
-      const { connection, sent } = addConn();
+      const { connection, sent } = addConn('user1');
 
       dispatcher.dispatch(connection.id, { type: 'JOIN_ROOM', payload: { roomId: 'lobby' } });
       expect(
@@ -76,7 +84,7 @@ describe('EventDispatcher', () => {
     });
 
     it('unregisters a handler', () => {
-      const { connection, sent } = addConn();
+      const { connection } = addConn('user1');
       let count = 0;
 
       const handler = () => {
@@ -93,7 +101,7 @@ describe('EventDispatcher', () => {
   describe('JOIN_ROOM / LEAVE_ROOM', () => {
     it('joins a room when handler is registered', () => {
       rooms.create('lobby', 'Lobby');
-      const { connection } = addConn();
+      const { connection } = addConn('user1');
 
       dispatcher.registerRoomHandlers();
       dispatcher.dispatch(connection.id, { type: 'JOIN_ROOM', payload: { roomId: 'lobby' } });
@@ -102,7 +110,7 @@ describe('EventDispatcher', () => {
     });
 
     it('sends ERROR when JOIN_ROOM has no roomId', () => {
-      const { connection, sent } = addConn();
+      const { connection, sent } = addConn('user1');
       dispatcher.registerRoomHandlers();
       dispatcher.dispatch(connection.id, { type: 'JOIN_ROOM' });
       expect(sent.some((m) => m.type === 'ERROR')).toBe(true);
@@ -110,7 +118,7 @@ describe('EventDispatcher', () => {
 
     it('leaves a room', () => {
       rooms.create('lobby', 'Lobby');
-      const { connection, sent } = addConn();
+      const { connection, sent } = addConn('user1');
       rooms.join(connection.id, 'lobby');
       sent.length = 0;
 
@@ -121,7 +129,7 @@ describe('EventDispatcher', () => {
     });
 
     it('sends ERROR when LEAVE_ROOM has no roomId', () => {
-      const { connection, sent } = addConn();
+      const { connection, sent } = addConn('user1');
       dispatcher.registerRoomHandlers();
       dispatcher.dispatch(connection.id, { type: 'LEAVE_ROOM' });
       expect(sent.some((m) => m.type === 'ERROR')).toBe(true);
@@ -131,7 +139,7 @@ describe('EventDispatcher', () => {
   describe('CREATE_TABLE / JOIN_TABLE / LEAVE_TABLE', () => {
     it('creates a table', () => {
       rooms.create('lobby', 'Lobby');
-      const { connection } = addConn();
+      const { connection } = addConn('user1');
 
       dispatcher.registerTableHandlers();
       dispatcher.dispatch(connection.id, {
@@ -143,15 +151,15 @@ describe('EventDispatcher', () => {
     });
 
     it('sends ERROR when CREATE_TABLE has no roomId', () => {
-      const { connection, sent } = addConn();
+      const { connection, sent } = addConn('user1');
       dispatcher.registerTableHandlers();
       dispatcher.dispatch(connection.id, { type: 'CREATE_TABLE', payload: { name: 'T' } });
       expect(sent.some((m) => m.type === 'ERROR')).toBe(true);
     });
 
     it('joins a table', () => {
-      const owner = addConn().connection;
-      const joiner = addConn();
+      const owner = addConn('user1').connection;
+      const joiner = addConn('user2');
       const table = tables.create('T', 'r1', owner.id);
 
       dispatcher.registerTableHandlers();
@@ -164,14 +172,14 @@ describe('EventDispatcher', () => {
     });
 
     it('sends ERROR when JOIN_TABLE has no tableId', () => {
-      const { connection, sent } = addConn();
+      const { connection, sent } = addConn('user1');
       dispatcher.registerTableHandlers();
       dispatcher.dispatch(connection.id, { type: 'JOIN_TABLE' });
       expect(sent.some((m) => m.type === 'ERROR')).toBe(true);
     });
 
     it('leaves a table', () => {
-      const owner = addConn().connection;
+      const owner = addConn('user1').connection;
       const table = tables.create('T', 'r1', owner.id);
 
       dispatcher.registerTableHandlers();
@@ -184,7 +192,7 @@ describe('EventDispatcher', () => {
     });
 
     it('sends ERROR when LEAVE_TABLE has no tableId', () => {
-      const { connection, sent } = addConn();
+      const { connection, sent } = addConn('user1');
       dispatcher.registerTableHandlers();
       dispatcher.dispatch(connection.id, { type: 'LEAVE_TABLE' });
       expect(sent.some((m) => m.type === 'ERROR')).toBe(true);
@@ -194,8 +202,8 @@ describe('EventDispatcher', () => {
   describe('CHAT_MESSAGE', () => {
     it('broadcasts chat to room occupants', () => {
       rooms.create('lobby', 'Lobby');
-      const c1 = addConn();
-      const c2 = addConn();
+      const c1 = addConn('user1');
+      const c2 = addConn('user2');
       rooms.join(c1.connection.id, 'lobby');
       rooms.join(c2.connection.id, 'lobby');
       c1.sent.length = 0;
@@ -204,14 +212,14 @@ describe('EventDispatcher', () => {
       dispatcher.registerChatHandler();
       dispatcher.dispatch(c1.connection.id, {
         type: 'CHAT_MESSAGE',
-        payload: { roomId: 'lobby', content: 'Hello' },
+        payload: { roomId: 'lobby', text: 'Hello', username: 'User1' },
       });
 
       expect(c2.sent.some((m) => m.type === 'CHAT_MESSAGE')).toBe(true);
     });
 
-    it('sends ERROR when content is missing', () => {
-      const { connection, sent } = addConn();
+    it('sends ERROR when text is missing', () => {
+      const { connection, sent } = addConn('user1');
       dispatcher.registerChatHandler();
       dispatcher.dispatch(connection.id, {
         type: 'CHAT_MESSAGE',
@@ -221,14 +229,84 @@ describe('EventDispatcher', () => {
     });
 
     it('sends ERROR when scope is missing', () => {
-      const { connection, sent } = addConn();
+      const { connection, sent } = addConn('user1');
       dispatcher.registerChatHandler();
       dispatcher.dispatch(connection.id, {
         type: 'CHAT_MESSAGE',
-        payload: { content: 'Hello' },
+        payload: { text: 'Hello' },
       });
       expect(sent.some((m) => m.type === 'ERROR')).toBe(true);
     });
+
+    it('sends ERROR when user is not in the room', () => {
+      rooms.create('lobby', 'Lobby');
+      const c1 = addConn('user1'); // not joined
+      dispatcher.registerChatHandler();
+      dispatcher.dispatch(c1.connection.id, {
+        type: 'CHAT_MESSAGE',
+        payload: { roomId: 'lobby', text: 'Hello', username: 'User1' },
+      });
+      expect(c1.sent.some((m) => m.type === 'ERROR')).toBe(true);
+    });
+
+    it('sanitizes profanity in messages', () => {
+      rooms.create('lobby', 'Lobby');
+      const c1 = addConn('user1');
+      const c2 = addConn('user2');
+      rooms.join(c1.connection.id, 'lobby');
+      rooms.join(c2.connection.id, 'lobby');
+      c1.sent.length = 0;
+      c2.sent.length = 0;
+
+      dispatcher.registerChatHandler();
+      dispatcher.dispatch(c1.connection.id, {
+        type: 'CHAT_MESSAGE',
+        payload: { roomId: 'lobby', text: 'that is shit', username: 'User1' },
+      });
+
+      const chatMsg = c2.sent.find((m) => m.type === 'CHAT_MESSAGE');
+      expect(chatMsg).toBeDefined();
+      const payload = chatMsg!.payload as Record<string, unknown>;
+      expect(payload.text).toBe('that is ****');
+    });
+
+    it('stores message in history', () => {
+      rooms.create('lobby', 'Lobby');
+      const c1 = addConn('user1');
+      rooms.join(c1.connection.id, 'lobby');
+      c1.sent.length = 0;
+
+      dispatcher.registerChatHandler();
+      dispatcher.dispatch(c1.connection.id, {
+        type: 'CHAT_MESSAGE',
+        payload: { roomId: 'lobby', text: 'Hello', username: 'User1' },
+      });
+
+      const history = chat.getHistory('lobby', null);
+      expect(history).toHaveLength(1);
+      expect(history[0].text).toBe('Hello');
+    });
+  });
+
+  // ── Security: Authentication Gate ───────────────────────────────────
+
+  it('blocks non-PING, non-AUTHENTICATE messages from unauthenticated connections', () => {
+    const { connection, sent } = addConn(); // no userId
+    dispatcher.registerRoomHandlers();
+    dispatcher.dispatch(connection.id, { type: 'JOIN_ROOM', payload: { roomId: 'lobby' } });
+    expect(
+      sent.some(
+        (m) =>
+          m.type === 'ERROR' &&
+          (m.payload as any)?.message === 'Authenticate before sending messages',
+      ),
+    ).toBe(true);
+  });
+
+  it('allows PING from unauthenticated connections', () => {
+    const { connection, sent } = addConn(); // no userId
+    dispatcher.dispatch(connection.id, { type: 'PING' });
+    expect(sent.some((m) => m.type === 'PONG')).toBe(true);
   });
 
   describe('handleDisconnect', () => {

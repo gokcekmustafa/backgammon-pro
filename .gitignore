@@ -3,3 +3,7 @@ dist/
 .next/
 *.tsbuildinfo
 *.log
+.env
+.env.*
+coverage/
+.turbo/

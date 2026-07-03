@@ -32,9 +32,14 @@ describe('CLIENT_MESSAGE_TYPES', () => {
     expect(CLIENT_MESSAGE_TYPES).toContain('LEAVE_TABLE');
     expect(CLIENT_MESSAGE_TYPES).toContain('CHAT_MESSAGE');
     expect(CLIENT_MESSAGE_TYPES).toContain('PING');
+    expect(CLIENT_MESSAGE_TYPES).toContain('AUTHENTICATE');
+    expect(CLIENT_MESSAGE_TYPES).toContain('ROLL_DICE');
+    expect(CLIENT_MESSAGE_TYPES).toContain('MAKE_MOVE');
+    expect(CLIENT_MESSAGE_TYPES).toContain('RESIGN_GAME');
+    expect(CLIENT_MESSAGE_TYPES).toContain('RECONNECT_GAME');
   });
 
-  it('has exactly 7 message types', () => {
-    expect(CLIENT_MESSAGE_TYPES).toHaveLength(7);
+  it('has exactly 12 message types', () => {
+    expect(CLIENT_MESSAGE_TYPES).toHaveLength(12);
   });
 });

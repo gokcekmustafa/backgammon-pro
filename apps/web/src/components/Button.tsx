@@ -6,6 +6,7 @@ interface ButtonShared {
   variant?: Variant;
   children: React.ReactNode;
   className?: string;
+  'aria-label'?: string;
 }
 
 interface ButtonAsButton extends ButtonShared {
@@ -36,15 +37,16 @@ export default function Button({
   variant = 'primary',
   children,
   className = '',
+  'aria-label': ariaLabel,
   ...props
 }: ButtonProps) {
   const base =
-    'inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold transition-colors';
+    'inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-stone-950';
   const classes = `${base} ${variantStyles[variant]} ${className}`;
 
   if (props.href !== undefined) {
     return (
-      <Link href={props.href} className={classes}>
+      <Link href={props.href} className={classes} aria-label={ariaLabel}>
         {children}
       </Link>
     );
@@ -56,6 +58,7 @@ export default function Button({
       onClick={props.onClick}
       disabled={props.disabled}
       className={classes}
+      aria-label={ariaLabel}
     >
       {children}
     </button>

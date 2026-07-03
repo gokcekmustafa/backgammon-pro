@@ -28,6 +28,7 @@ enum TableStatus {
   open
   occupied
   playing
+  finished
   closed
 
   @@map("table_status")

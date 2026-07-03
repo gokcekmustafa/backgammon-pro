@@ -1,12 +1,6 @@
-import type {
-  BoardGeometry,
-  ColorScheme,
-  CheckerPlacement,
-  RenderOptions,
-  BoardRendererResult,
-} from './types';
+import type { CheckerPlacement, RenderOptions, BoardRendererResult } from './types';
 import { createBoardGeometry, computeCheckerDiameter } from './Geometry';
-import { svgRenderBoard, svgRenderCheckers, buildSvgDocument, DEFAULT_COLORS } from './SvgBoard';
+import { svgRenderBoard, svgRenderCheckers, buildSvgDocument } from './SvgBoard';
 
 export const DEFAULT_CHECKER_GAP = 2;
 export const DEFAULT_CHECKER_PADDING_RATIO = 0.75;

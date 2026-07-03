@@ -12,7 +12,7 @@ import {
   DEFAULT_COLORS,
 } from './SvgBoard';
 import { createBoardGeometry } from './Geometry';
-import type { Rect, CheckerPlacement } from './types';
+import type { CheckerPlacement } from './types';
 
 describe('svgBoardBackground', () => {
   it('produces a rect element', () => {

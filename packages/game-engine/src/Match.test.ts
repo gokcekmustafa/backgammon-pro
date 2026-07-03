@@ -6,13 +6,14 @@ import {
   startMatch,
   startNextGame,
   recordGameResult,
+  resignInMatch,
   isMatchOver,
   getMatchWinner,
   getMatchScore,
   getRequiredWins,
   getGamesRemaining,
 } from './Match';
-import { MatchStatus, Player } from './types';
+import { MatchStatus, Player, WinType } from './types';
 
 describe('createMatchConfig', () => {
   it('creates config with given values', () => {
@@ -85,16 +86,16 @@ describe('recordGameResult', () => {
   it('records winner for current game', () => {
     const match = startMatch(createMatch(createMatchConfig(3)));
     const withGame = startNextGame(match);
-    const result = recordGameResult(withGame, Player.One, 'normal', 1);
+    const result = recordGameResult(withGame, Player.One, WinType.Normal, 1);
 
     expect(result.games[0].winner).toBe(Player.One);
-    expect(result.games[0].winType).toBe('normal');
+    expect(result.games[0].winType).toBe(WinType.Normal);
   });
 
   it('updates player scores', () => {
     const match = startMatch(createMatch(createMatchConfig(3)));
     const withGame = startNextGame(match);
-    const result = recordGameResult(withGame, Player.One, 'normal', 1);
+    const result = recordGameResult(withGame, Player.One, WinType.Normal, 1);
 
     expect(result.player1.score).toBe(1);
     expect(result.player2.score).toBe(0);
@@ -103,7 +104,7 @@ describe('recordGameResult', () => {
   it('completes match when player reaches score limit', () => {
     const match = startMatch(createMatch(createMatchConfig(1)));
     const withGame = startNextGame(match);
-    const result = recordGameResult(withGame, Player.One, 'normal', 1);
+    const result = recordGameResult(withGame, Player.One, WinType.Normal, 1);
 
     expect(result.status).toBe(MatchStatus.Completed);
     expect(result.winner).toBe(Player.One);
@@ -112,7 +113,7 @@ describe('recordGameResult', () => {
   it('does not complete match before score limit', () => {
     const match = startMatch(createMatch(createMatchConfig(3)));
     const withGame = startNextGame(match);
-    const result = recordGameResult(withGame, Player.One, 'normal', 1);
+    const result = recordGameResult(withGame, Player.One, WinType.Normal, 1);
 
     expect(result.status).toBe(MatchStatus.InProgress);
     expect(result.winner).toBeNull();
@@ -123,21 +124,82 @@ describe('recordGameResult', () => {
     let m = match;
 
     m = startNextGame(m);
-    m = recordGameResult(m, Player.One, 'normal', 1);
+    m = recordGameResult(m, Player.One, WinType.Normal, 1);
 
     m = startNextGame(m);
-    m = recordGameResult(m, Player.One, 'normal', 1);
+    m = recordGameResult(m, Player.One, WinType.Normal, 1);
 
     m = startNextGame(m);
-    m = recordGameResult(m, Player.Two, 'normal', 1);
+    m = recordGameResult(m, Player.Two, WinType.Normal, 1);
 
     m = startNextGame(m);
-    m = recordGameResult(m, Player.One, 'normal', 1);
+    m = recordGameResult(m, Player.One, WinType.Normal, 1);
 
     expect(m.status).toBe(MatchStatus.Completed);
     expect(m.winner).toBe(Player.One);
     expect(m.player1.score).toBe(3);
     expect(m.player2.score).toBe(1);
+  });
+});
+
+describe('recordGameResult - gammon/backgammon scoring', () => {
+  it('awards 2 points for a gammon win', () => {
+    const match = startMatch(createMatch(createMatchConfig(5)));
+    const withGame = startNextGame(match);
+    const result = recordGameResult(withGame, Player.One, WinType.Gammon, 2);
+
+    expect(result.player1.score).toBe(2);
+    expect(result.player2.score).toBe(0);
+    expect(result.games[0].winValue).toBe(2);
+  });
+
+  it('awards 3 points for a backgammon win', () => {
+    const match = startMatch(createMatch(createMatchConfig(7)));
+    const withGame = startNextGame(match);
+    const result = recordGameResult(withGame, Player.One, WinType.Backgammon, 3);
+
+    expect(result.player1.score).toBe(3);
+    expect(result.games[0].winValue).toBe(3);
+  });
+
+  it('normal win awards 1 point', () => {
+    const match = startMatch(createMatch(createMatchConfig(5)));
+    const withGame = startNextGame(match);
+    const result = recordGameResult(withGame, Player.Two, WinType.Normal, 1);
+
+    expect(result.player2.score).toBe(1);
+    expect(result.games[0].winValue).toBe(1);
+  });
+
+  it('gammon win can finish the match', () => {
+    const match = startMatch(createMatch(createMatchConfig(3)));
+    let m = startNextGame(match);
+    m = recordGameResult(m, Player.One, WinType.Gammon, 2);
+
+    expect(m.status).toBe(MatchStatus.Completed);
+    expect(m.winner).toBe(Player.One);
+  });
+});
+
+describe('resignInMatch', () => {
+  it('records a resignation with winValue of 1', () => {
+    const match = startMatch(createMatch(createMatchConfig(5)));
+    const withGame = startNextGame(match);
+    const result = resignInMatch(withGame, Player.One);
+
+    expect(result.games[0].winner).toBe(Player.Two);
+    expect(result.games[0].winType).toBe(WinType.Resignation);
+    expect(result.games[0].winValue).toBe(1);
+    expect(result.player2.score).toBe(1);
+  });
+
+  it('resigning player loses', () => {
+    const match = startMatch(createMatch(createMatchConfig(5)));
+    const withGame = startNextGame(match);
+    const result = resignInMatch(withGame, Player.Two);
+
+    expect(result.games[0].winner).toBe(Player.One);
+    expect(result.player1.score).toBe(1);
   });
 });
 

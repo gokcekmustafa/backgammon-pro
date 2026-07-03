@@ -1,11 +1,13 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { verifyAccessToken } from '../lib/jwt';
 
+export interface PlayerAuth {
+  id: string;
+  type: 'user' | 'guest';
+}
+
 export interface AuthenticatedRequest extends FastifyRequest {
-  user?: {
-    id: string;
-    type: 'user' | 'guest';
-  };
+  user?: PlayerAuth;
 }
 
 export async function authMiddleware(request: FastifyRequest, reply: FastifyReply): Promise<void> {
