@@ -17,11 +17,20 @@ module.exports = {
     react: {
       version: '18',
     },
+    'import/resolver': { node: {} },
   },
   rules: {
     '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     '@typescript-eslint/no-explicit-any': 'warn',
     'react/react-in-jsx-scope': 'off',
   },
-  ignorePatterns: ['dist/', 'node_modules/', '.next/'],
+  ignorePatterns: ['dist/', 'node_modules/', '.next/', 'load-tests/'],
+  overrides: [
+    {
+      files: ['apps/web/**/*.{js,jsx,ts,tsx}'],
+      rules: {
+        '@next/next/no-html-link-for-pages': ['error', 'apps/web/src/app'],
+      },
+    },
+  ],
 };
