@@ -1,88 +1,77 @@
 # Backgammon Pro
 
-A commercial-quality online Backgammon platform built with a modular monorepo architecture, targeting web, Android, and iOS deployments.
+A commercial-grade online Backgammon platform with real-time multiplayer, tournaments, seasons, battle pass, and full administrative tooling.
 
 ## Technology Stack
 
 | Layer            | Technology                   |
 | ---------------- | ---------------------------- |
 | Framework (Web)  | Next.js 14 (React 18)        |
-| Server           | Fastify 4                    |
-| Language         | TypeScript 5 (strict mode)   |
+| API Server       | Fastify 4                    |
+| Language         | TypeScript 5 (strict)        |
 | Styling          | Tailwind CSS 3               |
+| Database         | PostgreSQL 16 + Prisma ORM   |
+| Real-time        | WebSocket (ws)               |
+| Caching          | In-memory (Redis-compatible) |
 | Package Manager  | pnpm 9 (workspaces)          |
-| Build (Packages) | tsup (ESM output)            |
-| Linting          | ESLint 8 + TypeScript plugin |
-| Formatting       | Prettier 3                   |
+| Container        | Docker + docker-compose      |
 | Testing          | Vitest                       |
-| Git Hooks        | Husky + lint-staged          |
-
-## Prerequisites
-
-- **Node.js** >= 18
-- **pnpm** >= 9 (install via `npm install -g pnpm`)
 
 ## Quick Start
 
 ```bash
-# Install all dependencies
 pnpm install
-
-# Build all packages and applications
+pnpm --filter @backgammon/database run prisma:generate
 pnpm build
-
-# Run everything in development mode
 pnpm dev
 ```
 
 ## Project Structure
 
 ```
-backgammon-pro/
-├── apps/
-│   ├── web/              # Next.js 14 web application
-│   └── game-server/      # Fastify 4 game server
-├── packages/
-│   ├── game-engine/      # Backgammon game logic and rules
-│   ├── board-renderer/   # Board rendering primitives
-│   ├── layout-engine/    # Layout geometry and calculations
-│   ├── shared/           # Shared types, constants, utilities
-│   ├── ui/               # Reusable UI component library
-│   ├── config/           # Shared TypeScript configurations
-│   ├── eslint-config/    # Shared ESLint rules
-│   └── prettier-config/  # Shared Prettier formatting rules
-├── database/             # Database schemas and migrations
-├── docs/                 # Project documentation
-│   ├── architecture/     # System architecture documentation
-│   ├── adr/              # Architecture Decision Records
-│   ├── api/              # API specifications
-│   ├── database/         # Database design documentation
-│   ├── game-engine/      # Game engine documentation
-│   ├── layout/           # Layout system documentation
-│   ├── ui/               # UI component documentation
-│   └── testing/          # Testing strategy and guides
-└── infra/                # Infrastructure configuration
+apps/
+  game-server/       # Fastify API + WebSocket server
+  web/               # Next.js frontend
+packages/
+  board-renderer/    # Canvas-based board rendering
+  config/            # Shared config (eslint, prettier, tsconfig)
+  database/          # Prisma schema + client
+  game-engine/       # Game logic (rules, AI, validation)
+docs/                # Documentation
+load-tests/          # k6 load testing scripts
 ```
+
+## Key Features
+
+- **Real-time multiplayer** with WebSocket-based game sessions
+- **Matchmaking** with ranked/standard tables in themed rooms
+- **Tournaments** with single-elimination brackets
+- **Seasons & Battle Pass** with XP progression and rewards
+- **Anti-cheat** with server-side validation, timing checks, replay detection
+- **Security** with refresh token rotation, session management, rate limiting
+- **Admin panel** for user management, moderation, and system oversight
+- **Monitoring** with health checks, metrics, and structured logging
 
 ## Documentation
 
-| Document                           | Description                                   |
-| ---------------------------------- | --------------------------------------------- |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | System architecture and package relationships |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Development setup and contribution guidelines |
-| [DECISIONS.md](DECISIONS.md)       | Architecture Decision Record index            |
-| [ROADMAP.md](ROADMAP.md)           | Project roadmap and milestones                |
-| [docs/adr/](docs/adr/)             | Detailed Architecture Decision Records        |
+| Document | Description |
+|----------|-------------|
+| [API](docs/API.md) | Complete API reference |
+| [Environment](docs/ENVIRONMENT.md) | Environment variable reference |
+| [Deployment](docs/DEPLOYMENT.md) | Production deployment |
+| [Docker](docs/DEPLOYMENT_DOCKER.md) | Docker deployment guide |
+| [Backup & Restore](docs/operations/backup-strategy.md) | Backup procedures |
+| [Disaster Recovery](docs/DISASTER_RECOVERY.md) | DR plan |
+| [Security](docs/SECURITY_AUDIT.md) | Security architecture |
+| [Monitoring](docs/MONITORING.md) | Metrics & observability |
+| [Admin Guide](docs/ADMIN_GUIDE.md) | Admin operations |
+| [Super Admin Guide](docs/SUPER_ADMIN_GUIDE.md) | Super Admin operations |
+| [Architecture](ARCHITECTURE.md) | System architecture |
+| [Contributing](CONTRIBUTING.md) | Contribution guidelines |
 
-## Scripts
+## Environment Variables
 
-| Command             | Description                                      |
-| ------------------- | ------------------------------------------------ |
-| `pnpm dev`          | Run all packages and apps in dev mode (parallel) |
-| `pnpm build`        | Build all packages and apps                      |
-| `pnpm lint`         | Lint all files with ESLint                       |
-| `pnpm format`       | Format all files with Prettier                   |
-| `pnpm format:check` | Check formatting without writing                 |
+See [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) for the complete reference.
 
 ## License
 

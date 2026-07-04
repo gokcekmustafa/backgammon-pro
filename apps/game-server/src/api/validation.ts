@@ -55,3 +55,45 @@ export const roomIdParamsSchema = z.object({
 export const avatarUploadBodySchema = z.object({
   image: z.string().min(1, 'Image is required'),
 });
+
+export const adminListUsersQuerySchema = z.object({
+  offset: z.coerce.number().int().min(0).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  search: z.string().max(100).optional(),
+  role: z.enum(['SUPER_ADMIN', 'ADMIN', 'MODERATOR', 'USER']).optional(),
+  banned: z
+    .string()
+    .optional()
+    .transform((v) => (v === 'true' ? true : v === 'false' ? false : undefined)),
+  deleted: z
+    .string()
+    .optional()
+    .transform((v) => (v === 'true' ? true : v === 'false' ? false : undefined)),
+});
+
+export const adminUserIdParamsSchema = z.object({
+  id: z.string().min(1, 'User ID is required'),
+});
+
+export const adminChangeRoleBodySchema = z.object({
+  role: z.enum(['SUPER_ADMIN', 'ADMIN', 'MODERATOR', 'USER'], {
+    errorMap: () => ({ message: 'Role must be one of: SUPER_ADMIN, ADMIN, MODERATOR, USER' }),
+  }),
+});
+
+export const adminToggleStatusBodySchema = z.object({
+  isActive: z.boolean(),
+});
+
+export const adminToggleBanBodySchema = z.object({
+  banned: z.boolean(),
+});
+
+export const adminToggleModeratorBodySchema = z.object({
+  promote: z.boolean(),
+});
+
+export const adminAuditLogQuerySchema = z.object({
+  offset: z.coerce.number().int().min(0).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+});

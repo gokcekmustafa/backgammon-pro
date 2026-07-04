@@ -1,11 +1,15 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { PrismaClient } from '@backgammon/database';
 import type { WebSocketServer } from 'ws';
+import type { MonitoringService } from '../monitoring-service';
+import type { CacheService } from '../cache-service';
 
 export function registerHealthCheck(
   app: FastifyInstance,
   prisma: PrismaClient,
   wss?: WebSocketServer,
+  monitoring?: MonitoringService,
+  cache?: CacheService,
 ): void {
   app.get('/api/health', async (_request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -45,5 +49,22 @@ export function registerHealthCheck(
       uptime: process.uptime(),
       timestamp: new Date().toISOString(),
     });
+  });
+
+  app.get('/api/metrics', async (_request: FastifyRequest, reply: FastifyReply) => {
+    if (!monitoring) {
+      return reply.status(503).send({ error: 'Monitoring not available' });
+    }
+    const start = Date.now();
+    const metrics = await monitoring.getMetrics();
+    monitoring.recordResponseTime(Date.now() - start);
+    return reply.send(metrics);
+  });
+
+  app.get('/api/cache/stats', async (_request: FastifyRequest, reply: FastifyReply) => {
+    if (!cache) {
+      return reply.status(503).send({ error: 'Cache not available' });
+    }
+    return reply.send(cache.getStats());
   });
 }

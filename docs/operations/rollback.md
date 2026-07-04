@@ -1,59 +1,93 @@
 # Rollback Procedures
 
-## 1. Docker Rollback
+## Application Rollback
+
+### Prerequisites
+- Previous Docker images tagged or available in registry
+- Database migration rollback scripts available (see below)
+- Backup from before the deployment
+
+### Rollback Steps
 
 ```bash
-# Revert to previous image tag
-docker compose -f docker-compose.prod.yml up -d --pull=always
+# 1. Identify the previous stable version
+docker compose -f docker-compose.prod.yml images
 
-# Or explicitly specify previous tag
-docker compose -f docker-compose.prod.yml down
-docker compose -f docker-compose.prod.yml run --rm game-server ghcr.io/your-org/backgammon-pro/game-server:<previous-sha>
-docker compose -f docker-compose.prod.yml run --rm web ghcr.io/your-org/backgammon-pro/web:<previous-sha>
+# 2. Revert to previous images
+docker compose -f docker-compose.prod.yml up -d --force-recreate \
+  game-server=previous-tag \
+  web=previous-tag
+
+# 3. Verify health
+curl -f http://localhost:3001/api/health/ready
+
+# 4. If database schema changed, run rollback migration
+# See Database Rollback below
+
+# 5. Verify full functionality
+curl -f http://localhost:3001/api/health
 ```
 
-## 2. Database Rollback
+## Database Rollback
 
-Prisma Migrate supports rollback via migration history:
+All migrations are additive (no destructive operations), so rollback is typically unnecessary. However, if a migration introduced a breaking schema change:
+
+### Rollback via Manual SQL
+
+Each migration has a corresponding rollback script in `packages/database/prisma/migrations/`. Run these in reverse order:
 
 ```bash
-# Check migration history
+# Connect to database
+docker compose exec -T postgres psql -U backgammon -d backgammon
+
+# Reverse the most recent migration
+ALTER TABLE "Users" DROP COLUMN IF EXISTS "role";
+DROP TYPE IF EXISTS "user_role";
+
+ALTER TABLE "Users" DROP COLUMN IF EXISTS "deleted_at";
+ALTER TABLE "Users" DROP COLUMN IF EXISTS "banned_at";
+DROP TABLE IF EXISTS "AuditLogs";
+
+# Verify
+\dt
+```
+
+### Full Database Restore
+
+If multiple migrations need reversal:
+
+```bash
+# 1. Restore from backup taken before the deployments
+docker compose -f docker-compose.prod.yml exec -T postgres \
+  pg_restore -U backgammon -d backgammon --clean --if-exists < /backups/pre-deploy.dump
+
+# 2. Verify
 docker compose -f docker-compose.prod.yml exec game-server npx prisma migrate status
 
-# Roll back last migration
-docker compose -f docker-compose.prod.yml exec game-server npx prisma migrate reset --force
+# 3. Run any remaining required migrations
+docker compose -f docker-compose.prod.yml exec game-server npx prisma migrate deploy
 ```
 
-**⚠️ Warning:** `migrate reset` drops all data. Use database restore from backup instead when data preservation is needed.
+## Migration Safety
 
-## 3. Cloudflare Pages Rollback
+All existing migrations are **additive only**:
+- `20260703215600_add_rbac`: Added `role` column + enum (safe to revert)
+- `20260703220000_add_audit_log`: Added `banned_at`/`deleted_at` columns + AuditLogs table (safe to revert)
 
-### Via Dashboard
+**Never** create destructive migrations (DROP COLUMN, DROP TABLE, ALTER COLUMN type) in this codebase. Always: add columns, create new tables, add indexes.
 
-1. Go to Cloudflare Dashboard > Pages > backgammon-pro
-2. Click on the latest deployment
-3. Click "Rollback" to revert to a previous deployment
-
-### Via Wrangler CLI
+## Verification After Rollback
 
 ```bash
-wrangler pages deployment list --project-name=backgammon-pro
-wrangler pages deployment --project-name=backgammon-pro <deployment-id>
+# 1. Health check
+curl http://localhost:3001/api/health/ready
+
+# 2. Database connectivity
+docker compose exec game-server npx prisma migrate status
+
+# 3. Run test suite
+pnpm test
+
+# 4. Manual smoke test
+curl http://localhost:3001/api/stats/leaderboard
 ```
-
-## 4. DNS / Cloudflare Rollback
-
-If DNS changes caused issues:
-
-1. Cloudflare Dashboard > DNS > Records
-2. Revert any changed A/AAAA/CNAME records
-3. If using Cloudflare Tunnel, check tunnel status in Zero Trust dashboard
-
-## Quick Checklist
-
-- [ ] Identify the issue (health endpoint? logs?)
-- [ ] Decide: rollback Docker images or revert Cloudflare Pages?
-- [ ] For DB issues: restore from latest backup
-- [ ] Verify health endpoint returns 200
-- [ ] Verify WebSocket connections succeed
-- [ ] Notify users if applicable

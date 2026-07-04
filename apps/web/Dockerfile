@@ -21,13 +21,19 @@ COPY packages/ ./packages/
 RUN pnpm --filter @backgammon/database run build
 RUN pnpm --filter @backgammon/web run build
 
-FROM base AS runner
+FROM node:20-alpine AS runner
 ENV NODE_ENV=production
+RUN apk add --no-cache tini
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
 COPY --from=builder /app/apps/web/.next/ ./.next/
 COPY --from=builder /app/apps/web/public/ ./public/
 COPY --from=builder /app/apps/web/package.json ./package.json
 COPY --from=builder /app/node_modules/ ./node_modules/
+
+RUN rm -rf /tmp/* /root/.cache /root/.npm
+
 USER appuser
 EXPOSE 3000
+ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["pnpm", "--filter", "@backgammon/web", "start"]

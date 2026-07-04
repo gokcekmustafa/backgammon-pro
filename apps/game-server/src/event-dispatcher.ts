@@ -9,7 +9,7 @@ import { ChatManager } from './chat-manager';
 type MessageHandler = (
   connectionId: string,
   payload: Record<string, unknown> | undefined,
-) => ServerMessage | void;
+) => ServerMessage | void | Promise<ServerMessage | void>;
 
 export class EventDispatcher {
   private handlers = new Map<string, MessageHandler>();
@@ -49,6 +49,8 @@ export class EventDispatcher {
   }
 
   dispatch(connectionId: string, message: ClientMessage): ServerMessage | void {
+    this.connections.updateActivity(connectionId);
+
     if (!CLIENT_MESSAGE_TYPES.includes(message.type)) {
       this.sendError(connectionId, `Unknown message type: ${message.type}`);
       return;
@@ -74,7 +76,15 @@ export class EventDispatcher {
       return;
     }
 
-    return handler(connectionId, message.payload);
+    const result = handler(connectionId, message.payload);
+    if (result instanceof Promise) {
+      result.catch((err) => {
+        console.error('Handler error:', err);
+        this.sendError(connectionId, 'Internal handler error');
+      });
+    } else {
+      return result;
+    }
   }
 
   registerRoomHandlers(): void {
@@ -163,7 +173,7 @@ export class EventDispatcher {
       this.gameSessions!.handleRoll(connectionId);
     });
 
-    this.on('MAKE_MOVE', (connectionId, payload) => {
+    this.on('MAKE_MOVE', async (connectionId, payload) => {
       const from = payload?.from as number | undefined;
       const to = payload?.to as number | undefined;
       const diceUsed = payload?.diceUsed as number | undefined;
@@ -176,7 +186,7 @@ export class EventDispatcher {
         }
         return;
       }
-      this.gameSessions!.handleMove(connectionId, from, to, diceUsed);
+      await this.gameSessions!.handleMove(connectionId, from, to, diceUsed);
     });
 
     this.on('RESIGN_GAME', (connectionId) => {

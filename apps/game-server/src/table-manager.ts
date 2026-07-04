@@ -22,6 +22,8 @@ export class TableManager {
       name,
       connectionIds: [creatorId],
       status: 'waiting',
+      locked: false,
+      spectatorIds: [],
       createdAt: Date.now(),
     };
     this.tables.set(id, table);
@@ -60,6 +62,7 @@ export class TableManager {
   join(connectionId: string, tableId: string): TableState | undefined {
     const table = this.tables.get(tableId);
     if (!table) return undefined;
+    if (table.locked) return undefined;
     if (table.status !== 'waiting') return undefined;
     if (table.connectionIds.includes(connectionId)) return table;
 
@@ -102,7 +105,7 @@ export class TableManager {
       conn.send(createServerMessage('TABLE_LEFT', { tableId }));
     }
 
-    if (table.connectionIds.length === 0) {
+    if (table.connectionIds.length === 0 && !table.locked) {
       this.tables.delete(tableId);
     }
 
@@ -130,6 +133,83 @@ export class TableManager {
     return [...(this.connectionTables.get(connectionId) ?? [])];
   }
 
+  lock(tableId: string): boolean {
+    const table = this.tables.get(tableId);
+    if (!table) return false;
+    table.locked = true;
+    this.broadcastToTable(tableId, createServerMessage('ADMIN_TABLE_LOCKED', { tableId }));
+    this.broadcastTableUpdate(table.roomId);
+    return true;
+  }
+
+  unlock(tableId: string): boolean {
+    const table = this.tables.get(tableId);
+    if (!table) return false;
+    table.locked = false;
+    this.broadcastToTable(tableId, createServerMessage('ADMIN_TABLE_UNLOCKED', { tableId }));
+    this.broadcastTableUpdate(table.roomId);
+    return true;
+  }
+
+  closeTable(tableId: string): boolean {
+    const table = this.tables.get(tableId);
+    if (!table) return false;
+    this.broadcastToTable(tableId, createServerMessage('ADMIN_TABLE_CLOSED', { tableId }));
+    for (const cid of [...table.connectionIds]) {
+      this.leave(cid, tableId);
+    }
+    this.tables.delete(tableId);
+    return true;
+  }
+
+  removePlayer(tableId: string, connectionId: string): boolean {
+    const table = this.tables.get(tableId);
+    if (!table) return false;
+    if (!table.connectionIds.includes(connectionId)) return false;
+    this.leave(connectionId, tableId);
+    return true;
+  }
+
+  sendWarning(tableId: string, message: string): boolean {
+    const table = this.tables.get(tableId);
+    if (!table) return false;
+    this.broadcastToTable(tableId, createServerMessage('ADMIN_WARNING', { tableId, message }));
+    return true;
+  }
+
+  broadcastMessage(tableId: string, message: string): boolean {
+    const table = this.tables.get(tableId);
+    if (!table) return false;
+    this.broadcastToTable(tableId, createServerMessage('ADMIN_BROADCAST', { tableId, message }));
+    return true;
+  }
+
+  addSpectator(tableId: string, connectionId: string): boolean {
+    const table = this.tables.get(tableId);
+    if (!table) return false;
+    if (!table.spectatorIds.includes(connectionId)) {
+      table.spectatorIds.push(connectionId);
+    }
+    return true;
+  }
+
+  removeSpectator(tableId: string, connectionId: string): boolean {
+    const table = this.tables.get(tableId);
+    if (!table) return false;
+    table.spectatorIds = table.spectatorIds.filter((id) => id !== connectionId);
+    const conn = this.connections.get(connectionId);
+    if (conn) {
+      conn.send(createServerMessage('TABLE_LEFT', { tableId }));
+    }
+    return true;
+  }
+
+  private broadcastToTable(tableId: string, message: ReturnType<typeof createServerMessage>): void {
+    const table = this.tables.get(tableId);
+    if (!table) return;
+    this.connections.broadcastTo(table.connectionIds, message);
+  }
+
   private broadcastTableUpdate(roomId: string): void {
     const tables = this.getByRoom(roomId);
     const payload = {
@@ -138,6 +218,7 @@ export class TableManager {
         id: t.id,
         name: t.name,
         status: t.status,
+        locked: t.locked,
         playerCount: t.connectionIds.length,
       })),
     };

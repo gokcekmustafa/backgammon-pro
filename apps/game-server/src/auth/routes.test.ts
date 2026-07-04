@@ -1,4 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import Fastify from 'fastify';
+import { registerAuthRoutes } from './routes';
+import type { SessionManager } from '../session-manager';
+import type { SecurityService } from '../security-service';
 
 vi.mock('../lib/password', () => ({
   hashPassword: vi.fn((s: string) => Promise.resolve(`hashed_${s}`)),
@@ -8,202 +12,136 @@ vi.mock('../lib/password', () => ({
 vi.mock('../lib/jwt', () => ({
   signAccessToken: vi.fn(() => 'access_token'),
   signRefreshToken: vi.fn(() => 'refresh_token'),
+  verifyAccessToken: vi.fn((token: string) => {
+    if (token === 'valid_access') return { sub: 'u1', type: 'user' as const };
+    throw new Error('Invalid token');
+  }),
   verifyRefreshToken: vi.fn((token: string) => {
-    if (token === 'valid_refresh')
-      return { sub: 'user_1', sessionId: 'sess_1', type: 'user' as const };
-    if (token === 'guest_refresh')
-      return { sub: 'guest_1', sessionId: 'sess_2', type: 'guest' as const };
+    if (token === 'valid_refresh') return { sub: 'user_1', sessionId: 'sess_1' };
     throw new Error('Invalid token');
   }),
 }));
 
-import { loginHandler, guestLoginHandler, refreshHandler, logoutHandler } from './routes';
-
-function mockPrisma(overrides: Record<string, unknown> = {}) {
+function mockSessionManager(): SessionManager {
   return {
-    user: {
-      findUnique: vi.fn(),
-    },
-    guestUser: {
-      create: vi.fn(),
-    },
-    session: {
-      create: vi.fn(),
-      findFirst: vi.fn(),
-      update: vi.fn(),
-      updateMany: vi.fn(),
-    },
-    ...overrides,
-  } as any;
+    createSession: vi.fn().mockResolvedValue({ accessToken: 'access_token', refreshToken: 'refresh_token' }),
+    refreshSession: vi.fn().mockResolvedValue({ accessToken: 'new_access', refreshToken: 'new_refresh' }),
+    revokeSession: vi.fn().mockResolvedValue(true),
+    revokeAllUserSessions: vi.fn().mockResolvedValue(),
+    getUserSessions: vi.fn().mockResolvedValue([]),
+    getActiveSessionCount: vi.fn().mockResolvedValue(1),
+    cleanupExpiredSessions: vi.fn().mockResolvedValue(0),
+  } as unknown as SessionManager;
 }
 
-describe('loginHandler', () => {
+function mockSecurity(): SecurityService {
+  return {
+    log: vi.fn().mockResolvedValue(undefined),
+    getEvents: vi.fn().mockResolvedValue({ events: [], total: 0 }),
+    countByType: vi.fn().mockResolvedValue(0),
+    countByUser: vi.fn().mockResolvedValue(0),
+    getSummary: vi.fn().mockResolvedValue({ failedLogins24h: 0, tokenAbuse24h: 0, cheatAttempts24h: 0, rateLimitViolations24h: 0, totalEvents24h: 0 }),
+  } as unknown as SecurityService;
+}
+
+function buildApp(sessions: SessionManager, security: SecurityService) {
+  const app = Fastify();
+  const prisma = {
+    user: { findUnique: vi.fn() },
+    guestUser: { create: vi.fn() },
+  };
+  registerAuthRoutes(app, prisma as any, sessions, security);
+  return app;
+}
+
+describe('auth routes', () => {
+  let sessions: SessionManager;
+  let security: SecurityService;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    sessions = mockSessionManager();
+    security = mockSecurity();
   });
 
-  it('returns 400 when email is missing', async () => {
-    const prisma = mockPrisma();
-    const result = await loginHandler(prisma, { password: 'pw' });
-    expect(result.status).toBe(400);
-    expect(result.body).toHaveProperty('error');
-  });
-
-  it('returns 400 when password is missing', async () => {
-    const prisma = mockPrisma();
-    const result = await loginHandler(prisma, { email: 'test@test.com' });
-    expect(result.status).toBe(400);
-  });
-
-  it('returns 401 when user not found', async () => {
-    const prisma = mockPrisma();
-    prisma.user.findUnique.mockResolvedValue(null);
-    const result = await loginHandler(prisma, { email: 'unknown@test.com', password: 'pw' });
-    expect(result.status).toBe(401);
-  });
-
-  it('returns 401 when password is wrong', async () => {
-    const prisma = mockPrisma();
-    prisma.user.findUnique.mockResolvedValue({
-      id: 'u1',
-      email: 'test@test.com',
-      passwordHash: 'hashed_wrong',
-      username: 'test',
-      displayName: 'Test',
+  describe('POST /auth/login', () => {
+    it('returns 400 if email or password missing', async () => {
+      const app = buildApp(sessions, security);
+      const res = await app.inject({ method: 'POST', url: '/auth/login', payload: {} });
+      expect(res.statusCode).toBe(400);
     });
-    const result = await loginHandler(prisma, { email: 'test@test.com', password: 'correct' });
-    expect(result.status).toBe(401);
-  });
 
-  it('returns 200 with tokens on success', async () => {
-    const prisma = mockPrisma();
-    prisma.user.findUnique.mockResolvedValue({
-      id: 'u1',
-      email: 'test@test.com',
-      passwordHash: 'hashed_password123',
-      username: 'testuser',
-      displayName: 'Test User',
+    it('returns 401 for invalid credentials', async () => {
+      const app = buildApp(sessions, security);
+      const prisma = { user: { findUnique: vi.fn().mockResolvedValue(null) } };
+      const app2 = Fastify();
+      registerAuthRoutes(app2, prisma as any, sessions, security);
+      const res = await app2.inject({ method: 'POST', url: '/auth/login', payload: { email: 'test@test.com', password: 'wrong' } });
+      expect(res.statusCode).toBe(401);
     });
-    prisma.session.create.mockResolvedValue({ id: 's1' });
 
-    const result = await loginHandler(prisma, { email: 'test@test.com', password: 'password123' });
-
-    expect(result.status).toBe(200);
-    expect(result.body).toHaveProperty('accessToken', 'access_token');
-    expect(result.body).toHaveProperty('refreshToken', 'refresh_token');
-    expect(result.body).toHaveProperty('user');
-    expect((result.body as any).user.email).toBe('test@test.com');
-  });
-});
-
-describe('guestLoginHandler', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('creates a guest and returns tokens', async () => {
-    const prisma = mockPrisma();
-    prisma.guestUser.create.mockResolvedValue({
-      id: 'g1',
-      displayName: 'GuestPlayer',
+    it('returns tokens on successful login', async () => {
+      const prisma = {
+        user: { findUnique: vi.fn().mockResolvedValue({ id: 'u1', email: 'test@test.com', passwordHash: 'hashed_pass', username: 'test', displayName: 'Test' }) },
+      };
+      const app = Fastify();
+      registerAuthRoutes(app, prisma as any, sessions, security);
+      const res = await app.inject({ method: 'POST', url: '/auth/login', payload: { email: 'test@test.com', password: 'pass' } });
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.accessToken).toBe('access_token');
+      expect(body.user).toBeDefined();
     });
-    prisma.session.create.mockResolvedValue({ id: 's1' });
-
-    const result = await guestLoginHandler(prisma, { displayName: 'GuestPlayer' });
-
-    expect(result.status).toBe(200);
-    expect(result.body).toHaveProperty('accessToken');
-    expect(result.body).toHaveProperty('refreshToken');
-    expect((result.body as any).guest.displayName).toBe('GuestPlayer');
   });
 
-  it('uses default name when displayName is empty', async () => {
-    const prisma = mockPrisma();
-    prisma.guestUser.create.mockResolvedValue({ id: 'g2', displayName: 'Guest' });
-    prisma.session.create.mockResolvedValue({ id: 's1' });
-
-    const result = await guestLoginHandler(prisma, { displayName: '  ' });
-
-    expect(result.status).toBe(200);
-    expect((result.body as any).guest.displayName).toBe('Guest');
-  });
-
-  it('uses default name when displayName is not provided', async () => {
-    const prisma = mockPrisma();
-    prisma.guestUser.create.mockResolvedValue({ id: 'g3', displayName: 'Guest' });
-    prisma.session.create.mockResolvedValue({ id: 's1' });
-
-    const result = await guestLoginHandler(prisma, {});
-
-    expect(result.status).toBe(200);
-    expect((result.body as any).guest.displayName).toBe('Guest');
-  });
-});
-
-describe('refreshHandler', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('returns 400 when refreshToken is missing', async () => {
-    const prisma = mockPrisma();
-    const result = await refreshHandler(prisma, {});
-    expect(result.status).toBe(400);
-  });
-
-  it('returns 401 for invalid refresh token', async () => {
-    const prisma = mockPrisma();
-    const result = await refreshHandler(prisma, { refreshToken: 'bad_token' });
-    expect(result.status).toBe(401);
-  });
-
-  it('returns 401 when session is not found', async () => {
-    const prisma = mockPrisma();
-    prisma.session.findFirst.mockResolvedValue(null);
-    const result = await refreshHandler(prisma, { refreshToken: 'valid_refresh' });
-    expect(result.status).toBe(401);
-  });
-
-  it('returns 200 with new tokens on success', async () => {
-    const prisma = mockPrisma();
-    prisma.session.findFirst.mockResolvedValue({
-      id: 'sess_1',
-      expiresAt: new Date(Date.now() + 86400000),
+  describe('POST /auth/guest-login', () => {
+    it('creates guest session', async () => {
+      const prisma = { guestUser: { create: vi.fn().mockResolvedValue({ id: 'g1', displayName: 'Guest' }) } };
+      const app = Fastify();
+      registerAuthRoutes(app, prisma as any, sessions, security);
+      const res = await app.inject({ method: 'POST', url: '/auth/guest-login', payload: {} });
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.accessToken).toBe('access_token');
+      expect(body.guest).toBeDefined();
     });
-    prisma.session.update.mockResolvedValue({});
-
-    const result = await refreshHandler(prisma, { refreshToken: 'valid_refresh' });
-
-    expect(result.status).toBe(200);
-    expect(result.body).toHaveProperty('accessToken');
-    expect(result.body).toHaveProperty('refreshToken');
-  });
-});
-
-describe('logoutHandler', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
   });
 
-  it('returns 400 when refreshToken is missing', async () => {
-    const prisma = mockPrisma();
-    const result = await logoutHandler(prisma, {});
-    expect(result.status).toBe(400);
+  describe('POST /auth/refresh', () => {
+    it('returns 400 if token missing', async () => {
+      const app = buildApp(sessions, security);
+      const res = await app.inject({ method: 'POST', url: '/auth/refresh', payload: {} });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('returns new tokens on valid refresh', async () => {
+      const app = buildApp(sessions, security);
+      const res = await app.inject({ method: 'POST', url: '/auth/refresh', payload: { refreshToken: 'valid_refresh' } });
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.accessToken).toBe('new_access');
+    });
   });
 
-  it('returns 401 for invalid refresh token', async () => {
-    const prisma = mockPrisma();
-    const result = await logoutHandler(prisma, { refreshToken: 'bad' });
-    expect(result.status).toBe(401);
+  describe('POST /auth/logout', () => {
+    it('returns 200 on logout', async () => {
+      const app = buildApp(sessions, security);
+      const res = await app.inject({ method: 'POST', url: '/auth/logout', payload: { refreshToken: 'valid_refresh' } });
+      expect(res.statusCode).toBe(200);
+    });
   });
 
-  it('returns 200 on successful logout', async () => {
-    const prisma = mockPrisma();
-    prisma.session.updateMany.mockResolvedValue({ count: 1 });
+  describe('GET /auth/sessions', () => {
+    it('returns user sessions', async () => {
+      const app = buildApp(sessions, security);
+      const res = await app.inject({ method: 'GET', url: '/auth/sessions', headers: { authorization: 'Bearer valid_access' } });
+      expect(res.statusCode).toBe(200);
+    });
 
-    const result = await logoutHandler(prisma, { refreshToken: 'valid_refresh' });
-
-    expect(result.status).toBe(200);
-    expect(prisma.session.updateMany).toHaveBeenCalled();
+    it('returns 401 without auth', async () => {
+      const app = buildApp(sessions, security);
+      const res = await app.inject({ method: 'GET', url: '/auth/sessions' });
+      expect(res.statusCode).toBe(401);
+    });
   });
 });

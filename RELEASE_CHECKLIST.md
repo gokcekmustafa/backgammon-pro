@@ -2,97 +2,115 @@
 
 ## Pre-Release
 
-- [x] All 549 tests pass (game-engine: 210, board-renderer: 55, layout-engine: 54, game-server: 203, web: 27)
-- [x] Production build succeeds (game-server: 72.8 KB, web: 87.3 KB shared)
-- [x] ESLint clean: 0 errors, 92 warnings (pre-existing, all `any` type warnings)
+- [x] All 499 tests pass (429 backend + 70 frontend)
+- [x] Production build succeeds
+- [x] ESLint clean: 0 errors
 - [x] Prettier formatted: 0 formatting issues
 - [x] No TODO/FIXME/HACK comments remaining
-- [x] TypeScript strict mode enabled in all packages (via `base.json`)
-- [x] Dead code removed:
-  - `packages/shared/` - deleted (unused)
-  - `packages/ui/` - deleted (unused)
-  - `@backgammon/layout-engine` removed from web dependencies (unused)
-  - `apps/game-server/dist/` - build artifacts (gitignored)
-- [x] Duplicate `resolvePlayer` method removed from `stats-service.ts`
-- [x] Duplicate `applyMoveToState` replaced with `applyMove` from `Move.ts`
+- [x] TypeScript strict mode enabled in all packages
+- [x] Dead code removed (shared/, ui/, duplicate helpers)
 - [x] Docker multi-stage builds verified (game-server + web)
-- [x] `.dockerignore` verified (excludes node_modules, .git, .env\*, dist/)
+- [x] `.dockerignore` verified
 
 ## Environment & Configuration
 
-- [x] `.env.example` documents all required variables (DATABASE_URL, JWT_SECRET, JWT_REFRESH_SECRET, etc.)
-- [x] Prisma schema validated (13 models, 8 enums, proper indexes)
+- [x] `.env.example` documents all required variables
+- [x] Prisma schema validated (all models, enums, indexes)
 - [x] No pending Prisma migrations (schema is source of truth)
-- [x] Environment variables validated at startup via Zod in `env.ts`
+- [x] Environment variables validated at startup via Zod
 - [x] JWT secrets crash production if missing
 - [x] CORS configured per environment
-- [x] CSP header configured in `next.config.mjs`
-
-## CI/CD
-
-- [x] GitHub Actions CI pipeline valid:
-  - PostgreSQL service container
-  - pnpm@9.15.0 setup
-  - Prisma client generation
-  - Lint → Test → Build → Docker push → Cloudflare deploy
-- [x] Docker images tagged with `latest` + commit SHA
-- [x] GHCR login with GITHUB_TOKEN
-
-## Infrastructure
-
-- [x] Docker Compose (dev + prod) with health checks, resource limits, logging
-- [x] Cloudflare Pages config (`wrangler.toml`) with env vars
-- [x] Graceful shutdown in game-server (SIGTERM/SIGINT)
-- [x] Health check endpoints (`GET /api/health`, `GET /api/health/ready`)
-- [x] Database backup/restore documented in `docs/operations/`
-- [x] Rollback procedures documented in `docs/operations/`
-
-## Security
-
-- [x] Security audit completed (20 vulnerabilities fixed, score 88/100)
-- [x] JWT key separation (access vs refresh tokens)
-- [x] WebSocket auth gate (unauthenticated messages rejected)
-- [x] WebSocket rate limiting (60 msg/10s window)
-- [x] CSP header blocking inline scripts
-- [x] Prisma transactions for rating updates + table joins
-- [x] Zod validation on all API inputs
-- [x] Docker non-root user
-- [x] Chat username sanitized (< > stripped, 50 char cap)
-
-## Accessibility
-
-- [x] Skip-to-content link added
-- [x] Game board SVG has `role="application"` + `aria-label`
-- [x] Chat has `aria-live="polite"` region
-- [x] Connection status has `aria-live="polite"` region
-- [x] PlayerPanel turn indicator has `aria-live="polite"`
-- [x] Form inputs all have associated `<label>` elements
-- [x] All interactive elements have `:focus-visible` ring
-- [x] Color contrast: minimum 4.5:1 ratio for text
-
-## Cross-Platform
-
-- [x] Safe-area CSS (notch/home indicator) via `env(safe-area-inset-*)`
-- [x] `viewport-fit=cover` meta tag for iOS full-screen
-- [x] WebSocket reconnect logic (3s delay) + PING/PONG heartbeat (25s)
-- [x] Touch interaction support via Pointer Events API
-- [x] Responsive layout: 4 breakpoints (mobile portrait → ultra-wide)
-- [x] PWA manifest + service worker
-- [x] Theme support (dark/light/system)
+- [x] CSP header configured
+- [x] Compression enabled
+- [x] Trusted proxy support (`trustProxy: isProduction`)
+- [x] Rate limiting: HTTP (global, per-user, per-IP) + WebSocket (60 msg/10s)
+- [x] Session management with refresh token rotation
+- [x] Anti-cheat: move timing, replay detection, server-side dice
 
 ## Documentation
 
-- [x] `ARCHITECTURE.md` - overall architecture
-- [x] `DECISIONS.md` - key architectural decisions
-- [x] `CONTRIBUTING.md` - contribution guidelines
-- [x] `ROADMAP.md` - future plans
-- [x] `docs/DEPLOYMENT.md` - production deployment
-- [x] `docs/INFRASTRUCTURE.md` - infrastructure overview
-- [x] `docs/SECURITY_AUDIT.md` - security audit report
-- [x] `docs/PERFORMANCE_REPORT.md` - performance benchmarks
-- [x] `docs/QA_REPORT.md` - cross-platform QA report
-- [x] `docs/operations/backup-strategy.md` - backup/restore
-- [x] `docs/operations/rollback.md` - rollback procedures
+- [x] `README.md` — complete project overview
+- [x] `ARCHITECTURE.md` — system architecture
+- [x] `DECISIONS.md` — key architectural decisions
+- [x] `CONTRIBUTING.md` — contribution guidelines
+- [x] `ROADMAP.md` — future plans
+- [x] `docs/API.md` — complete API reference
+- [x] `docs/ENVIRONMENT.md` — environment variable reference
+- [x] `docs/DEPLOYMENT.md` — production deployment guide
+- [x] `docs/DEPLOYMENT_DOCKER.md` — Docker deployment guide
+- [x] `docs/DISASTER_RECOVERY.md` — disaster recovery plan
+- [x] `docs/MONITORING.md` — monitoring & metrics guide
+- [x] `docs/ADMIN_GUIDE.md` — admin operations guide
+- [x] `docs/SUPER_ADMIN_GUIDE.md` — super admin operations guide
+- [x] `docs/SECURITY_AUDIT.md` — security architecture
+- [x] `docs/PERFORMANCE_REPORT.md` — performance benchmarks
+- [x] `docs/QA_REPORT.md` — cross-platform QA report
+- [x] `docs/INFRASTRUCTURE.md` — infrastructure overview
+- [x] `docs/operations/backup-strategy.md` — backup & restore
+- [x] `docs/operations/rollback.md` — rollback procedures
+
+## CI/CD
+
+- [x] GitHub Actions CI pipeline valid (lint → test → build → Docker)
+- [x] Docker images tagged with `latest` + commit SHA
+- [x] GHCR login with GITHUB_TOKEN
+
+## Infrastructure & Deployment
+
+- [x] `docker-compose.yml` (dev) + `docker-compose.prod.yml` (production)
+- [x] PostgreSQL health check + application health checks
+- [x] Correct startup order (postgres → game-server → web)
+- [x] Graceful shutdown (SIGTERM/SIGINT with timeout)
+- [x] Resource limits (CPU + memory) for all services
+- [x] JSON-file logging with rotation (10MB max, 3 files)
+- [x] `restart: unless-stopped` for all services
+- [x] `tini` init system in Docker images for proper signal handling
+- [x] Application runs as non-root user in Docker
+- [x] Cloudflare Pages config (`wrangler.toml`)
+
+## Security
+
+- [x] Authentication: JWT access + refresh tokens, guest accounts
+- [x] Authorization: role-based (SUPER_ADMIN, ADMIN, MODERATOR, USER)
+- [x] Admin endpoints gated by role verification
+- [x] Tournament registration checks permissions
+- [x] Battle Pass premium rewards require PREMIUM/VIP subscription
+- [x] Notification permissions: user can only access own notifications
+- [x] WebSocket auth gate (unauthenticated messages rejected)
+- [x] WebSocket rate limiting (60 msg/10s window)
+- [x] HTTP rate limiting (global + per-user + per-IP)
+- [x] CSP header blocking inline scripts
+- [x] Prisma transactions for atomic operations
+- [x] Zod validation on all API inputs
+- [x] Chat username sanitized (< > stripped, 50 char cap)
+- [x] Anti-cheat: impossible timing, replay detection, server dice
+
+## Monitoring & Observability
+
+- [x] Health endpoint: `GET /api/health` (basic) + `GET /api/health/ready` (readiness)
+- [x] Metrics endpoint: `GET /api/metrics` (memory, CPU, connections, response times, event loop)
+- [x] Cache stats: `GET /api/cache/stats` (hit ratio, size)
+- [x] Security events: `GET /api/admin/security/events`
+- [x] Audit logs: `GET /api/admin/audit`
+- [x] Structured JSON logging (configurable via `LOG_FORMAT`)
+
+## Performance
+
+- [x] In-memory cache layer (Redis-compatible) with TTL invalidation
+- [x] N+1 query elimination in season-service
+- [x] Missing database indexes added (5 new)
+- [x] WebSocket heartbeat (30s) + idle timeout (30min) + broadcast batching
+- [x] React Query optimization (staleTime, gcTime, refetchOnMount: false)
+- [x] Load testing scripts (login, leaderboard, tournaments, notifications, WebSocket)
+
+## Code Quality
+
+- [x] No TODO/FIXME/HACK/XXX comments
+- [x] No dead code (`shared/`, `ui/`, duplicate helpers removed)
+- [x] No debug `console.log` in production code (only seed.ts + env.ts + index.ts for startup)
+- [x] Benchmark files isolated in `packages/game-engine/src/benchmarks/`
+- [x] Consistent naming conventions across codebase
+- [x] No temporary or generated files in version control
 
 ## Final Verification
 
@@ -107,6 +125,7 @@
 - [ ] Health check endpoints responding
 - [ ] SSL/TLS configured (Cloudflare or reverse proxy)
 - [ ] Monitoring alerts configured
+- [ ] Load tests pass against production
 
 ## Post-Release
 

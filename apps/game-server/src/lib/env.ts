@@ -14,6 +14,18 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+  CONCURRENT_SESSION_LIMIT: z.coerce.number().int().positive().default(5),
+  RATE_LIMIT_PER_USER: z.coerce.number().int().positive().default(200),
+  RATE_LIMIT_PER_IP: z.coerce.number().int().positive().default(300),
+  MIN_MOVE_TIME_MS: z.coerce.number().int().positive().default(100),
+  SUSPICIOUS_LOGIN_THRESHOLD: z.coerce.number().int().positive().default(5),
+  CACHE_TTL_DEFAULT: z.coerce.number().int().positive().default(60_000),
+  CACHE_TTL_LEADERBOARD: z.coerce.number().int().positive().default(30_000),
+  CACHE_TTL_SEASONS: z.coerce.number().int().positive().default(30_000),
+  CACHE_TTL_PROFILE: z.coerce.number().int().positive().default(60_000),
+  CACHE_TTL_TOURNAMENTS: z.coerce.number().int().positive().default(30_000),
+  CACHE_TTL_ROOMS: z.coerce.number().int().positive().default(10_000),
+  CACHE_TTL_TABLES: z.coerce.number().int().positive().default(5_000),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -153,4 +153,72 @@ describe('TableManager', () => {
     tables.join(joiner, t1.id);
     expect(tables.getConnectionTables(joiner)).toEqual([t1.id]);
   });
+
+  it('lock prevents new joins', () => {
+    const { connection } = addConn();
+    const table = tables.create('T', 'r1', connection.id);
+    expect(tables.lock(table.id)).toBe(true);
+    const tableState = tables.get(table.id);
+    expect(tableState?.locked).toBe(true);
+    const { connection: joiner } = addConn();
+    const joined = tables.join(joiner.id, table.id);
+    expect(joined).toBeUndefined();
+  });
+
+  it('unlock allows joins again', () => {
+    const { connection } = addConn();
+    const table = tables.create('T', 'r1', connection.id);
+    tables.lock(table.id);
+    tables.unlock(table.id);
+    const { connection: joiner } = addConn();
+    const joined = tables.join(joiner.id, table.id);
+    expect(joined?.locked).toBe(false);
+  });
+
+  it('closeTable removes all players and deletes table', () => {
+    const { connection } = addConn();
+    const table = tables.create('T', 'r1', connection.id);
+    tables.closeTable(table.id);
+    expect(tables.get(table.id)).toBeUndefined();
+  });
+
+  it('removePlayer removes specific player', () => {
+    const { connection: owner } = addConn();
+    const { connection: joiner } = addConn();
+    const table = tables.create('T', 'r1', owner.id);
+    tables.join(joiner.id, table.id);
+    tables.removePlayer(table.id, joiner.id);
+    expect(tables.get(table.id)?.connectionIds).toEqual([owner.id]);
+  });
+
+  it('sendWarning sends ADMIN_WARNING message', () => {
+    const { connection, sent } = addConn();
+    const table = tables.create('T', 'r1', connection.id);
+    tables.sendWarning(table.id, 'Be nice!');
+    expect(sent.some((m) => m.type === 'ADMIN_WARNING')).toBe(true);
+  });
+
+  it('broadcastMessage sends ADMIN_BROADCAST message', () => {
+    const { connection, sent } = addConn();
+    const table = tables.create('T', 'r1', connection.id);
+    tables.broadcastMessage(table.id, 'Hello everyone');
+    expect(sent.some((m) => m.type === 'ADMIN_BROADCAST')).toBe(true);
+  });
+
+  it('addSpectator adds to spectator list', () => {
+    const { connection } = addConn();
+    const table = tables.create('T', 'r1', connection.id);
+    const { connection: spec } = addConn();
+    tables.addSpectator(table.id, spec.id);
+    expect(tables.get(table.id)?.spectatorIds).toContain(spec.id);
+  });
+
+  it('removeSpectator removes spectator', () => {
+    const { connection } = addConn();
+    const table = tables.create('T', 'r1', connection.id);
+    const { connection: spec } = addConn();
+    tables.addSpectator(table.id, spec.id);
+    tables.removeSpectator(table.id, spec.id);
+    expect(tables.get(table.id)?.spectatorIds).not.toContain(spec.id);
+  });
 });

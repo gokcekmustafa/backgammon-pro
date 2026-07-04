@@ -13,9 +13,13 @@ export function Providers({ children }: { children: ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 30000,
-            retry: 1,
+            staleTime: 60_000,
+            gcTime: 5 * 60_000,
+            retry: 2,
+            retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10_000),
             refetchOnWindowFocus: false,
+            refetchOnReconnect: true,
+            refetchOnMount: false,
           },
         },
       }),

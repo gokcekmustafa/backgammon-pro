@@ -4,6 +4,7 @@ import './globals.css';
 import { Providers } from '@/providers/Providers';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import PwaRegister from '@/components/PwaRegister';
+import NotificationBell from '@/components/NotificationBell';
 
 export const metadata: Metadata = {
   title: {
@@ -50,6 +51,9 @@ const navLinks = [
   { href: '/guest-login', label: 'Guest Login' },
   { href: '/lobby', label: 'Lobby' },
   { href: '/leaderboard', label: 'Leaderboard' },
+  { href: '/seasons', label: 'Seasons' },
+  { href: '/battle-pass', label: 'Battle Pass' },
+  { href: '/progression', label: 'Progression' },
   { href: '/settings', label: 'Settings' },
 ];
 
@@ -84,7 +88,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               >
                 Backgammon Pro
               </Link>
-              <ul className="flex gap-4 text-sm sm:gap-6" role="list">
+              <ul className="flex items-center gap-4 text-sm sm:gap-6" role="list">
                 {navLinks.map((link) => (
                   <li key={link.href}>
                     <Link
@@ -95,6 +99,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     </Link>
                   </li>
                 ))}
+                <li>
+                  <NotificationBell />
+                </li>
               </ul>
             </nav>
           </header>

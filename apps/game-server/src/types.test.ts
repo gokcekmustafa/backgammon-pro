@@ -37,9 +37,21 @@ describe('CLIENT_MESSAGE_TYPES', () => {
     expect(CLIENT_MESSAGE_TYPES).toContain('MAKE_MOVE');
     expect(CLIENT_MESSAGE_TYPES).toContain('RESIGN_GAME');
     expect(CLIENT_MESSAGE_TYPES).toContain('RECONNECT_GAME');
+    expect(CLIENT_MESSAGE_TYPES).toContain('ADMIN_CLOSE_TABLE');
+    expect(CLIENT_MESSAGE_TYPES).toContain('ADMIN_LOCK_TABLE');
+    expect(CLIENT_MESSAGE_TYPES).toContain('ADMIN_UNLOCK_TABLE');
+    expect(CLIENT_MESSAGE_TYPES).toContain('ADMIN_FORCE_REMOVE');
+    expect(CLIENT_MESSAGE_TYPES).toContain('ADMIN_SEND_WARNING');
+    expect(CLIENT_MESSAGE_TYPES).toContain('ADMIN_BROADCAST');
+    expect(CLIENT_MESSAGE_TYPES).toContain('ADMIN_PAUSE_GAME');
+    expect(CLIENT_MESSAGE_TYPES).toContain('ADMIN_RESUME_GAME');
+    expect(CLIENT_MESSAGE_TYPES).toContain('ADMIN_TERMINATE_GAME');
+    expect(CLIENT_MESSAGE_TYPES).toContain('ADMIN_FORCE_RESIGN');
+    expect(CLIENT_MESSAGE_TYPES).toContain('ADMIN_FORCE_DRAW');
+    expect(CLIENT_MESSAGE_TYPES).toContain('ADMIN_KICK_SPECTATOR');
   });
 
-  it('has exactly 12 message types', () => {
-    expect(CLIENT_MESSAGE_TYPES).toHaveLength(12);
+  it('has exactly 24 message types', () => {
+    expect(CLIENT_MESSAGE_TYPES).toHaveLength(24);
   });
 });

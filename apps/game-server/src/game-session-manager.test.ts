@@ -304,4 +304,64 @@ describe('GameSessionManager', () => {
     gsm.reset();
     expect(gsm.getSession('table1')).toBeUndefined();
   });
+
+  describe('admin methods', () => {
+    beforeEach(() => {
+      const send1 = createMockSend();
+      const send2 = createMockSend();
+      const c1 = connections.add(send1, vi.fn());
+      const c2 = connections.add(send2, vi.fn());
+      connections.bindUser(c1.id, 'user1');
+      connections.bindUser(c2.id, 'user2');
+      gsm.createSession('table1', 'user1', 'user2');
+    });
+
+    it('getAllSessions returns session info', () => {
+      const sessions = gsm.getAllSessions();
+      expect(sessions).toHaveLength(1);
+      expect(sessions[0].tableId).toBe('table1');
+      expect(sessions[0].status).toBe('active');
+    });
+
+    it('pauseSession sets status to paused', () => {
+      const result = gsm.pauseSession('table1');
+      expect(result).toBe(true);
+      const session = gsm.getSession('table1');
+      expect(session?.status).toBe('paused');
+    });
+
+    it('resumeSession sets status back to active', () => {
+      gsm.pauseSession('table1');
+      const result = gsm.resumeSession('table1');
+      expect(result).toBe(true);
+      const session = gsm.getSession('table1');
+      expect(session?.status).toBe('active');
+    });
+
+    it('terminateSession finishes the game', () => {
+      const result = gsm.terminateSession('table1');
+      expect(result).toBe(true);
+      expect(gsm.getSession('table1')).toBeUndefined();
+    });
+
+    it('forceResignPlayer forces player 1 to resign', () => {
+      const result = gsm.forceResignPlayer('table1', 1);
+      expect(result).toBe(true);
+      expect(gsm.getSession('table1')).toBeUndefined();
+    });
+
+    it('forceDraw ends the game with no winner', () => {
+      const result = gsm.forceDraw('table1');
+      expect(result).toBe(true);
+      expect(gsm.getSession('table1')).toBeUndefined();
+    });
+
+    it('returns false for non-existent table', () => {
+      expect(gsm.pauseSession('nonexistent')).toBe(false);
+      expect(gsm.resumeSession('nonexistent')).toBe(false);
+      expect(gsm.terminateSession('nonexistent')).toBe(false);
+      expect(gsm.forceResignPlayer('nonexistent', 1)).toBe(false);
+      expect(gsm.forceDraw('nonexistent')).toBe(false);
+    });
+  });
 });

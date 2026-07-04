@@ -17,23 +17,41 @@ import type { GameState, Move, Player as P } from '@backgammon/game-engine';
 import { createServerMessage } from './types';
 import type { ServerMessageType } from './types';
 import type { ConnectionManager } from './connection-manager';
+import type { AntiCheatService } from './anti-cheat-service';
 
 const RECONNECT_INTERVALS = [1000, 2000, 5000, 10_000, 30_000];
+
+export interface GameSessionInfo {
+  tableId: string;
+  p1UserId: string;
+  p2UserId: string;
+  status: 'active' | 'finished' | 'paused';
+  currentPlayer: P | null;
+  matchScore: { p1: number; p2: number };
+  disconnectedUserId: string | null;
+  createdAt: number;
+}
 
 interface GameSession {
   tableId: string;
   gameState: GameState;
   p1UserId: string;
   p2UserId: string;
-  status: 'active' | 'finished';
+  status: 'active' | 'finished' | 'paused';
   disconnectTimer: ReturnType<typeof setTimeout> | null;
   disconnectedUserId: string | null;
+  createdAt: number;
 }
 
 export class GameSessionManager {
   private sessions = new Map<string, GameSession>();
   private userSessions = new Map<string, string>();
   private validator = createValidator();
+  private antiCheat: AntiCheatService | null = null;
+
+  setAntiCheat(ac: AntiCheatService): void {
+    this.antiCheat = ac;
+  }
 
   constructor(
     private connections: ConnectionManager,
@@ -56,6 +74,7 @@ export class GameSessionManager {
       status: 'active',
       disconnectTimer: null,
       disconnectedUserId: null,
+      createdAt: Date.now(),
     };
     this.sessions.set(tableId, session);
     this.userSessions.set(p1UserId, tableId);
@@ -84,18 +103,25 @@ export class GameSessionManager {
     if (session.gameState.currentPlayer !== player) return;
     if (session.gameState.turn.phase !== TurnPhase.WaitingForRoll) return;
 
+    if (this.antiCheat) {
+      this.antiCheat.validateDiceRoll(userId, connectionId).catch(() => {});
+    }
+
     const roll = rollDice();
     session.gameState = setDiceRoll(session.gameState, roll);
 
     const legalMoves = this.validator.getLegalMoves(session.gameState);
     if (legalMoves.length === 0 && session.gameState.remainingDice.length > 0) {
       session.gameState = advanceTurn(session.gameState);
+      if (this.antiCheat) {
+        this.antiCheat.onTurnAdvance(userId).catch(() => {});
+      }
     }
 
     this.broadcastGameState(session);
   }
 
-  handleMove(connectionId: string, from: number, to: number, diceUsed: number): void {
+  async handleMove(connectionId: string, from: number, to: number, diceUsed: number): Promise<void> {
     const userId = this.connections.getUserId(connectionId);
     if (!userId) return;
     const session = this.getSessionByUserId(userId);
@@ -103,6 +129,18 @@ export class GameSessionManager {
 
     const player = this.getPlayerForUser(session, userId);
     if (session.gameState.currentPlayer !== player) return;
+
+    // Anti-cheat validation
+    if (this.antiCheat) {
+      const acResult = await this.antiCheat.validateMove(userId, connectionId, from, to, diceUsed);
+      if (!acResult.valid) {
+        const conn = this.connections.get(connectionId);
+        if (conn) {
+          conn.send(createServerMessage('GAME_MOVE_REJECTED', { reason: acResult.reason }));
+        }
+        return;
+      }
+    }
 
     const move: Move = { from, to, diceUsed, player, wasHit: false };
     const validation = this.validator.validateMove(session.gameState, move);
@@ -138,6 +176,11 @@ export class GameSessionManager {
       const remainingMoves = this.validator.getLegalMoves(session.gameState);
       if (remainingMoves.length === 0) {
         session.gameState = advanceTurn(session.gameState);
+        if (this.antiCheat) {
+          this.antiCheat.onTurnAdvance(userId).catch(() => {});
+          const opponentId = this.getOpponentUserId(session, userId);
+          this.antiCheat.onTurnAdvance(opponentId).catch(() => {});
+        }
       }
     }
 
@@ -253,6 +296,75 @@ export class GameSessionManager {
     this.userSessions.delete(session.p1UserId);
     this.userSessions.delete(session.p2UserId);
     this.sessions.delete(tableId);
+  }
+
+  getAllSessions(): GameSessionInfo[] {
+    return Array.from(this.sessions.values()).map((s) => ({
+      tableId: s.tableId,
+      p1UserId: s.p1UserId,
+      p2UserId: s.p2UserId,
+      status: s.status,
+      currentPlayer: s.gameState.currentPlayer ?? null,
+      matchScore: { p1: 0, p2: 0 },
+      disconnectedUserId: s.disconnectedUserId,
+      createdAt: s.createdAt,
+    }));
+  }
+
+  pauseSession(tableId: string): boolean {
+    const session = this.sessions.get(tableId);
+    if (!session || session.status !== 'active') return false;
+    session.status = 'paused';
+    this.broadcastGameState(session);
+    return true;
+  }
+
+  resumeSession(tableId: string): boolean {
+    const session = this.sessions.get(tableId);
+    if (!session || session.status !== 'paused') return false;
+    session.status = 'active';
+    this.broadcastGameState(session);
+    return true;
+  }
+
+  terminateSession(tableId: string): boolean {
+    const session = this.sessions.get(tableId);
+    if (!session || session.status === 'finished') return false;
+    session.status = 'finished';
+    this.broadcastGameState(session);
+    this.onGameComplete?.(session.tableId, session.p1UserId, session.p2UserId, null);
+    this.cleanupSession(tableId);
+    return true;
+  }
+
+  forceResignPlayer(tableId: string, playerNum: 1 | 2): boolean {
+    const session = this.sessions.get(tableId);
+    if (!session || session.status !== 'active') return false;
+    const player = playerNum === 1 ? Player.One : Player.Two;
+    session.gameState = resignGame(session.gameState, player);
+    session.status = 'finished';
+    this.broadcastGameState(session);
+    const winner = playerNum === 1 ? 2 : 1;
+    this.onGameComplete?.(tableId, session.p1UserId, session.p2UserId, winner);
+    this.cleanupSession(tableId);
+    return true;
+  }
+
+  forceDraw(tableId: string): boolean {
+    const session = this.sessions.get(tableId);
+    if (!session || session.status !== 'active') return false;
+    session.status = 'finished';
+    this.broadcastGameState(session);
+    this.onGameComplete?.(tableId, session.p1UserId, session.p2UserId, null);
+    this.cleanupSession(tableId);
+    return true;
+  }
+
+  kickConnection(connectionId: string): boolean {
+    const conn = this.connections.get(connectionId);
+    if (!conn) return false;
+    conn.close();
+    return true;
   }
 
   reset(): void {
