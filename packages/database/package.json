@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "build": "tsup",
+    "build": "prisma generate && tsup",
     "dev": "tsup --watch",
     "prisma:validate": "prisma validate",
     "prisma:generate": "prisma generate",
