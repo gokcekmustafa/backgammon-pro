@@ -1,3 +1,0 @@
-﻿CREATE TYPE "user_role" AS ENUM ('SUPER_ADMIN', 'ADMIN', 'MODERATOR', 'USER');
-
-ALTER TABLE "Users" ADD COLUMN "role" "user_role" NOT NULL DEFAULT 'USER';
