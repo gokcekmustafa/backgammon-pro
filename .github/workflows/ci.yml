@@ -77,6 +77,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+
       - name: Build and push game-server Docker image
         if: github.ref == 'refs/heads/master' && github.event_name == 'push'
         uses: docker/build-push-action@v5
