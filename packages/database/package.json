@@ -19,11 +19,11 @@
     "prisma:migrate": "prisma migrate dev"
   },
   "dependencies": {
-    "@prisma/client": "^5.20.0"
+    "@prisma/client": "5.22.0"
   },
   "devDependencies": {
     "@backgammon/config": "workspace:*",
-    "prisma": "^5.20.0",
+    "prisma": "5.22.0",
     "tsup": "^8.0.0",
     "typescript": "^5.4.0"
   }
