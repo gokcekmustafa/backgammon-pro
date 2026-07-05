@@ -11,7 +11,6 @@ COPY packages/ ./packages/
 RUN pnpm install --frozen-lockfile
 
 FROM deps AS builder
-COPY tsconfig.json ./
 COPY apps/game-server/tsconfig.json ./apps/game-server/
 COPY apps/game-server/tsup.config.ts ./apps/game-server/
 COPY apps/game-server/src/ ./apps/game-server/src/

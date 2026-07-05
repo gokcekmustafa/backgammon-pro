@@ -15,7 +15,6 @@ ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_WS_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
-COPY tsconfig.json ./
 COPY apps/web/next.config.mjs ./apps/web/
 COPY apps/web/tsconfig.json ./apps/web/
 COPY apps/web/tailwind.config.ts ./apps/web/
