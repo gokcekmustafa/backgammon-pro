@@ -5,7 +5,17 @@ import { getAccessToken } from '@/lib/auth';
 
 type MessageHandler = (payload: Record<string, unknown>) => void;
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3002';
+function getWsUrl(): string {
+  if (typeof window !== 'undefined') {
+    const envUrl = process.env.NEXT_PUBLIC_WS_URL;
+    if (envUrl && !envUrl.includes('localhost')) return envUrl;
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${proto}//${window.location.host}`;
+  }
+  return process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3002';
+}
+
+const WS_URL = getWsUrl();
 const RECONNECT_DELAY = 3000;
 const PING_INTERVAL = 25000;
 

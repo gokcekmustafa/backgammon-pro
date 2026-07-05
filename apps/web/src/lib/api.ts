@@ -6,7 +6,16 @@ import {
   getStoredUser,
 } from './auth';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+function getBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    const envUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (envUrl && !envUrl.includes('localhost')) return envUrl;
+    return window.location.origin;
+  }
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+}
+
+const BASE_URL = getBaseUrl();
 
 export class ApiError extends Error {
   status: number;
