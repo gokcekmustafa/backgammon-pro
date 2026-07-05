@@ -54,6 +54,11 @@ jobs:
         env:
           DATABASE_URL: postgres://backgammon:backgammon@localhost:5432/backgammon
 
+      - name: Build Cloudflare Pages output
+        run: pnpm --filter @backgammon/web run pages:build
+        env:
+          DATABASE_URL: postgres://backgammon:backgammon@localhost:5432/backgammon
+
       - name: Lint
         run: pnpm run lint
 
@@ -65,7 +70,7 @@ jobs:
           JWT_REFRESH_SECRET: test-refresh-secret
 
       - name: Log in to GitHub Container Registry
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -73,7 +78,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push game-server Docker image
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -84,7 +89,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and push web Docker image
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -95,9 +100,9 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Deploy to Cloudflare Pages
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy apps/web/out --project-name=backgammon-pro
+          command: pages deploy .vercel/output/static --project-name=backgammon-pro
