@@ -1,10 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'export',
   compress: true,
   poweredByHeader: false,
   reactStrictMode: true,
   productionBrowserSourceMaps: false,
   images: {
+    unoptimized: true,
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 86400,
   },

@@ -1,7 +1,7 @@
 name = "backgammon-pro"
 compatibility_date = "2024-12-01"
 
-pages_build_output_dir = "apps/web/.next"
+pages_build_output_dir = "apps/web/out"
 
 [build]
 command = "pnpm install --frozen-lockfile && pnpm --filter @backgammon/database run build && pnpm --filter @backgammon/web run build"
