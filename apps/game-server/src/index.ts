@@ -61,7 +61,7 @@ const app = Fastify({
 });
 
 async function start(): Promise<void> {
-  await app.register(cors, { origin: env.CORS_ORIGIN, credentials: true });
+  await app.register(cors, { origin: env.FRONTEND_URL, credentials: true });
   await app.register(helmet, {
     contentSecurityPolicy: isProduction
       ? {
@@ -69,7 +69,7 @@ async function start(): Promise<void> {
             defaultSrc: ["'self'"],
             scriptSrc: ["'self'"],
             styleSrc: ["'self'", "'unsafe-inline'"],
-            connectSrc: ["'self'", env.CORS_ORIGIN],
+            connectSrc: ["'self'", env.FRONTEND_URL],
             imgSrc: ["'self'", 'data:'],
             fontSrc: ["'self'"],
             baseUri: ["'self'"],

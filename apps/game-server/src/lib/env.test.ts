@@ -16,7 +16,7 @@ describe('getEnv', () => {
     expect(env.DATABASE_URL).toBe('postgres://localhost:5432/db');
     expect(env.HTTP_PORT).toBe(3001);
     expect(env.WS_PORT).toBe(3002);
-    expect(env.CORS_ORIGIN).toBe('http://localhost:3000');
+    expect(env.FRONTEND_URL).toBe('http://localhost:3000');
     expect(env.RATE_LIMIT_MAX).toBe(100);
     expect(env.NODE_ENV).toBe('test');
   });

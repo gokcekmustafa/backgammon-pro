@@ -5,7 +5,7 @@ vi.mock('../lib/env', () => ({
   getEnv: () => ({
     HTTP_PORT: 3001,
     WS_PORT: 3002,
-    CORS_ORIGIN: '*',
+    FRONTEND_URL: '*',
     RATE_LIMIT_MAX: 100,
     NODE_ENV: 'test',
   }),
