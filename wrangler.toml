@@ -11,14 +11,14 @@ NODE_VERSION = "20"
 PNPM_VERSION = "9.15.0"
 
 [[build.environment.variables]]
-NEXT_PUBLIC_API_URL = "https://api.backgammon-pro.example.com"
-NEXT_PUBLIC_WS_URL = "wss://api.backgammon-pro.example.com"
+NEXT_PUBLIC_API_URL = "https://backgammon-pro.gokcek.workers.dev"
+NEXT_PUBLIC_WS_URL = "wss://backgammon-pro.gokcek.workers.dev"
 
 [env.production]
-vars = { NEXT_PUBLIC_API_URL = "https://api.backgammon-pro.example.com", NEXT_PUBLIC_WS_URL = "wss://api.backgammon-pro.example.com" }
+vars = { NEXT_PUBLIC_API_URL = "https://backgammon-pro.gokcek.workers.dev", NEXT_PUBLIC_WS_URL = "wss://backgammon-pro.gokcek.workers.dev" }
 
 [env.preview]
-vars = { NEXT_PUBLIC_API_URL = "https://api-staging.backgammon-pro.example.com", NEXT_PUBLIC_WS_URL = "wss://api-staging.backgammon-pro.example.com" }
+vars = { NEXT_PUBLIC_API_URL = "https://backgammon-pro.gokcek.workers.dev", NEXT_PUBLIC_WS_URL = "wss://backgammon-pro.gokcek.workers.dev" }
 
 [[routers]]
 pattern = "/*"
