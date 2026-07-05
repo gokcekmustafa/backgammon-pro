@@ -41,8 +41,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_API_URL: https://backgammon-pro.gokcek.workers.dev
-      NEXT_PUBLIC_WS_URL: wss://backgammon-pro.gokcek.workers.dev
+      NEXT_PUBLIC_API_URL: https://api.backgammon-pro.example.com
+      NEXT_PUBLIC_WS_URL: wss://api.backgammon-pro.example.com
     depends_on:
       - game-server
 
