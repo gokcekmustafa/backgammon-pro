@@ -1,0 +1,4 @@
+apps/web/out/
+apps/web/.next/
+**/node_modules/
+**/dist/
