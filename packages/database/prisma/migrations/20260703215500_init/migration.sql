@@ -1,4 +1,4 @@
-﻿-- CreateEnum
+-- CreateEnum
 CREATE TYPE "user_role" AS ENUM ('SUPER_ADMIN', 'ADMIN', 'MODERATOR', 'USER');
 
 -- CreateEnum
@@ -1243,4 +1243,3 @@ ALTER TABLE "SeasonRewards" ADD CONSTRAINT "fk_season_reward_level" FOREIGN KEY 
 
 -- AddForeignKey
 ALTER TABLE "SeasonRewards" ADD CONSTRAINT "fk_season_reward_user" FOREIGN KEY ("user_id") REFERENCES "Users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
