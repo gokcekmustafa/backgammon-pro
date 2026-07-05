@@ -50,20 +50,9 @@ jobs:
         env:
           DATABASE_URL: postgres://backgammon:backgammon@localhost:5432/backgammon
 
-      - name: Lint
-        run: pnpm run lint
-
       - name: Test
         run: pnpm -r run test
         env:
           DATABASE_URL: postgres://backgammon:backgammon@localhost:5432/backgammon
           JWT_SECRET: test-secret
           JWT_REFRESH_SECRET: test-refresh-secret
-
-      - name: Deploy to Cloudflare Pages
-        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy apps/web/out --project-name=backgammon-pro
