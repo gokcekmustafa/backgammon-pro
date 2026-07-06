@@ -3,13 +3,26 @@ import type { PrismaClient } from '@backgammon/database';
 import { comparePassword, hashPassword } from '../lib/password';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../lib/jwt';
 import { validateBody } from '../api/validate';
-import { loginSchema, guestLoginSchema, refreshSchema, logoutSchema } from '../api/validation';
+import {
+  loginSchema,
+  registerSchema,
+  guestLoginSchema,
+  refreshSchema,
+  logoutSchema,
+} from '../api/validation';
 import type { SessionManager, DeviceInfo } from '../session-manager';
 import type { SecurityService } from '../security-service';
 
 export interface LoginBody {
   email?: string;
   password?: string;
+}
+
+export interface RegisterBody {
+  email?: string;
+  password?: string;
+  username?: string;
+  displayName?: string;
 }
 
 export interface GuestLoginBody {
@@ -26,7 +39,7 @@ export interface LogoutBody {
 
 function extractDevice(request: FastifyRequest): DeviceInfo {
   return {
-    ip: request.ip ?? request.headers['x-forwarded-for'] as string ?? 'unknown',
+    ip: request.ip ?? (request.headers['x-forwarded-for'] as string) ?? 'unknown',
     userAgent: request.headers['user-agent'] ?? 'unknown',
   };
 }
@@ -69,7 +82,11 @@ export function registerAuthRoutes(
           ipAddress: request.ip,
         });
 
-        const recentFails = await security.countByUser(user.id, 'FAILED_LOGIN', new Date(Date.now() - 3600000));
+        const recentFails = await security.countByUser(
+          user.id,
+          'FAILED_LOGIN',
+          new Date(Date.now() - 3600000),
+        );
         if (recentFails >= 5) {
           await sessions.revokeAllUserSessions(user.id);
         }
@@ -81,6 +98,43 @@ export function registerAuthRoutes(
       const tokens = await sessions.createSession('user', user.id, device);
 
       return reply.status(200).send({
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          displayName: user.displayName,
+        },
+      });
+    },
+  );
+
+  app.post(
+    '/auth/register',
+    { preHandler: [validateBody(registerSchema)] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const body = request.body as RegisterBody;
+      const { email, password, username, displayName } = body;
+
+      if (!email || !password || !username || !displayName) {
+        return reply.status(400).send({ error: 'All fields are required' });
+      }
+
+      const existing = await prisma.user.findUnique({ where: { email } });
+      if (existing) {
+        return reply.status(409).send({ error: 'Email already in use' });
+      }
+
+      const passwordHash = await hashPassword(password);
+      const user = await prisma.user.create({
+        data: { email, passwordHash, username, displayName },
+      });
+
+      const device = extractDevice(request);
+      const tokens = await sessions.createSession('user', user.id, device);
+
+      return reply.status(201).send({
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
         user: {
@@ -164,21 +218,18 @@ export function registerAuthRoutes(
     }
   });
 
-  app.get(
-    '/auth/sessions',
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const header = request.headers.authorization;
-      if (!header || !header.startsWith('Bearer ')) {
-        return reply.status(401).send({ error: 'Unauthorized' });
-      }
-      try {
-        const { verifyAccessToken } = await import('../lib/jwt');
-        const payload = verifyAccessToken(header.slice(7));
-        const userSessions = await sessions.getUserSessions(payload.sub);
-        return reply.status(200).send({ sessions: userSessions });
-      } catch {
-        return reply.status(401).send({ error: 'Invalid token' });
-      }
-    },
-  );
+  app.get('/auth/sessions', async (request: FastifyRequest, reply: FastifyReply) => {
+    const header = request.headers.authorization;
+    if (!header || !header.startsWith('Bearer ')) {
+      return reply.status(401).send({ error: 'Unauthorized' });
+    }
+    try {
+      const { verifyAccessToken } = await import('../lib/jwt');
+      const payload = verifyAccessToken(header.slice(7));
+      const userSessions = await sessions.getUserSessions(payload.sub);
+      return reply.status(200).send({ sessions: userSessions });
+    } catch {
+      return reply.status(401).send({ error: 'Invalid token' });
+    }
+  });
 }

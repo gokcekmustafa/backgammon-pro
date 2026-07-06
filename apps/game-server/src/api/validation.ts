@@ -11,6 +11,13 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
+export const registerSchema = z.object({
+  email: z.string().email('Invalid email'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  username: z.string().min(1, 'Username is required').max(30),
+  displayName: z.string().min(1, 'Display name is required').max(50),
+});
+
 export const guestLoginSchema = z.object({
   displayName: z.string().max(50).optional(),
 });

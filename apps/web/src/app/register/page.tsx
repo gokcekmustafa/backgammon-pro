@@ -5,28 +5,35 @@ import Link from 'next/link';
 import { useAuth } from '@/providers/AuthProvider';
 import { ApiError } from '@/lib/api';
 
-export default function Login() {
+export default function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { register } = useAuth();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
 
-    if (!email || !password) {
-      setError('Email and password are required');
+    if (!email || !password || !username || !displayName) {
+      setError('All fields are required');
+      return;
+    }
+
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
       return;
     }
 
     setLoading(true);
     try {
-      await login(email, password);
+      await register(email, password, username, displayName);
     } catch (err) {
       if (err instanceof ApiError) {
-        setError((err.body as { error?: string })?.error || 'Login failed');
+        setError((err.body as { error?: string })?.error || 'Registration failed');
       } else {
         setError('An unexpected error occurred');
       }
@@ -38,8 +45,8 @@ export default function Login() {
   return (
     <div className="flex items-center justify-center px-4 py-20">
       <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-bold">Sign In</h1>
-        <p className="mt-1 text-sm text-stone-400">Sign in to your account to continue.</p>
+        <h1 className="text-2xl font-bold">Sign Up</h1>
+        <p className="mt-1 text-sm text-stone-400">Create a new account to get started.</p>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">
           {error && (
@@ -63,6 +70,34 @@ export default function Login() {
           </div>
 
           <div>
+            <label htmlFor="username" className="block text-sm font-medium text-stone-300">
+              Username
+            </label>
+            <input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-stone-700 bg-stone-900 px-4 py-2 text-sm text-stone-100 placeholder-stone-500 outline-none focus:border-amber-500"
+              placeholder="yourusername"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="displayName" className="block text-sm font-medium text-stone-300">
+              Display Name
+            </label>
+            <input
+              id="displayName"
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-stone-700 bg-stone-900 px-4 py-2 text-sm text-stone-100 placeholder-stone-500 outline-none focus:border-amber-500"
+              placeholder="Your Name"
+            />
+          </div>
+
+          <div>
             <label htmlFor="password" className="block text-sm font-medium text-stone-300">
               Password
             </label>
@@ -81,20 +116,14 @@ export default function Login() {
             disabled={loading}
             className="w-full rounded-lg bg-amber-500 px-4 py-3 text-sm font-semibold text-stone-950 transition-colors hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? 'Creating account...' : 'Sign Up'}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-stone-500">
-          Don&apos;t have an account?{' '}
-          <Link href="/register" className="text-amber-500 hover:text-amber-400">
-            Sign Up
-          </Link>
-        </p>
-        <p className="mt-2 text-center text-sm text-stone-500">
-          Or{' '}
-          <Link href="/guest-login" className="text-amber-500 hover:text-amber-400">
-            Play as Guest
+          Already have an account?{' '}
+          <Link href="/login" className="text-amber-500 hover:text-amber-400">
+            Sign In
           </Link>
         </p>
       </div>

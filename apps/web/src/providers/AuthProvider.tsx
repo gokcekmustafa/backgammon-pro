@@ -10,6 +10,12 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    username: string,
+    displayName: string,
+  ) => Promise<void>;
   guestLogin: (displayName?: string) => Promise<void>;
   logout: () => void;
 }
@@ -38,6 +44,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
+        skipAuth: true,
+      });
+      const authUser: AuthUser = { ...data.user, type: 'user' };
+      setStoredAuth({
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+        user: authUser,
+      });
+      setUser(authUser);
+      router.push('/lobby');
+    },
+    [router],
+  );
+
+  const register = useCallback(
+    async (email: string, password: string, username: string, displayName: string) => {
+      const data = await api<{
+        accessToken: string;
+        refreshToken: string;
+        user: AuthUser;
+      }>('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ email, password, username, displayName }),
         skipAuth: true,
       });
       const authUser: AuthUser = { ...data.user, type: 'user' };
@@ -83,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated: !!user, isLoading, login, guestLogin, logout }}
+      value={{ user, isAuthenticated: !!user, isLoading, login, register, guestLogin, logout }}
     >
       {children}
     </AuthContext.Provider>

@@ -47,6 +47,7 @@ export const viewport: Viewport = {
 
 const navLinks = [
   { href: '/', label: 'Home' },
+  { href: '/register', label: 'Sign Up' },
   { href: '/login', label: 'Login' },
   { href: '/guest-login', label: 'Guest Login' },
   { href: '/lobby', label: 'Lobby' },
