@@ -239,8 +239,6 @@ async function start(): Promise<void> {
   registerAdminSeasonRoutes(app, prisma, seasons);
   registerAdminSecurityRoutes(app, prisma, security, sessions, rateLimiter, monitoring);
 
-  await app.listen({ port: env.HTTP_PORT, host: '0.0.0.0' });
-
   const wss = new WebSocketServer({ server: app.server });
   monitoring.setWsServer(wss);
   registerHealthCheck(app, prisma, wss, monitoring, cache);
@@ -271,6 +269,7 @@ async function start(): Promise<void> {
     });
   });
 
+  await app.listen({ port: env.HTTP_PORT, host: '0.0.0.0' });
   app.log.info(`HTTP server listening on port ${env.HTTP_PORT}`);
   app.log.info(`WebSocket server sharing HTTP server`);
 
