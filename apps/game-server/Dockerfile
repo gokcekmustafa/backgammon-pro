@@ -23,38 +23,11 @@ ENV NODE_ENV=production
 RUN apk add --no-cache tini
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-# DIAG 1: deps stage after pnpm install
-RUN echo "=== DIAG 1: deps node_modules ===" && \
-    ls -la node_modules/jsonwebtoken 2>&1 || echo "jsonwebtoken_NOT_FOUND" && \
-    readlink -f node_modules/jsonwebtoken 2>&1 || echo "readlink_FAILED" && \
-    ls -la node_modules/.pnpm/ | grep jsonwebtoken 2>&1 || echo "NO_pnpm_jsonwebtoken" && \
-    pnpm list jsonwebtoken --depth 0 2>&1 || echo "pnpm_list_FAILED" && \
-    true
-
-RUN pnpm prune --prod
-
-# DIAG 2: after prune
-RUN echo "=== DIAG 2: after pnpm prune --prod ===" && \
-    (ls -la node_modules/jsonwebtoken 2>&1 || echo "jsonwebtoken_NOT_FOUND") && \
-    (readlink -f node_modules/jsonwebtoken 2>&1 || echo "readlink_FAILED") && \
-    (ls -la node_modules/.pnpm/ 2>&1 | grep jsonwebtoken || echo "NO_pnpm_jsonwebtoken") && \
-    (pnpm list jsonwebtoken --depth 0 2>&1 || echo "pnpm_list_FAILED") && \
-    (node --input-type=module -e "import('jsonwebtoken').then(()=>console.log('ESM OK')).catch(e=>{console.error('ESM FAIL:',e.code,e.message);process.exit(0)})" 2>&1 || echo "node_import_FAILED") && \
-    (node -e "console.log('CJS:',require.resolve('jsonwebtoken'))" 2>&1 || echo "cjs_resolve_FAILED") && \
-    true
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
 COPY --from=builder /app/packages/ ./packages/
 COPY --from=builder /app/apps/game-server/package.json ./
 COPY --from=builder /app/apps/game-server/dist/ ./dist/
-
-# DIAG 3: final stage
-RUN echo "=== DIAG 3: final runner ===" && \
-    (ls -la node_modules/jsonwebtoken 2>&1 || echo "jsonwebtoken_NOT_FOUND") && \
-    (readlink -f node_modules/jsonwebtoken 2>&1 || echo "readlink_FAILED") && \
-    (node --input-type=module -e "import('jsonwebtoken').then(()=>console.log('ESM OK')).catch(e=>{console.error('ESM FAIL:',e.code,e.message);process.exit(0)})" 2>&1 || echo "node_import_FAILED") && \
-    (node -e "console.log('CJS:',require.resolve('jsonwebtoken'))" 2>&1 || echo "cjs_resolve_FAILED") && \
-    (head -5 /app/package.json 2>&1 || echo "no_package_json") && \
-    true
 
 USER appuser
 EXPOSE 3001 3002
