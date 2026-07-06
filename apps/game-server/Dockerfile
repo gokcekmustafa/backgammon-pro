@@ -29,6 +29,7 @@ COPY --from=builder /app/pnpm-workspace.yaml ./
 COPY --from=builder /app/apps/game-server/package.json ./apps/game-server/
 
 RUN pnpm install --frozen-lockfile --prod --ignore-scripts
+RUN test -d node_modules/jsonwebtoken && echo "jsonwebtoken OK" || (echo "jsonwebtoken MISSING" && exit 1)
 
 COPY --from=builder /app/packages/ ./packages/
 COPY --from=builder /app/apps/game-server/dist/ ./dist/
