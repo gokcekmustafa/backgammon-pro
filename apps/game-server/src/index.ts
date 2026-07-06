@@ -92,9 +92,21 @@ async function start(): Promise<void> {
   const statsService = new StatsService(prisma);
   const security = new SecurityService(prisma);
   const sessions = new SessionManager(prisma, security, env.CONCURRENT_SESSION_LIMIT);
-  const rateLimiter = new RateLimiter(connections, security, env.RATE_LIMIT_MAX, env.RATE_LIMIT_PER_USER, env.RATE_LIMIT_PER_IP);
+  const rateLimiter = new RateLimiter(
+    connections,
+    security,
+    env.RATE_LIMIT_MAX,
+    env.RATE_LIMIT_PER_USER,
+    env.RATE_LIMIT_PER_IP,
+  );
   const antiCheat = new AntiCheatService(prisma, connections, security, env.MIN_MOVE_TIME_MS);
-  const monitoring = new MonitoringService(prisma, connections, rateLimiter, () => gameSessions.getAllSessions().length, cache);
+  const monitoring = new MonitoringService(
+    prisma,
+    connections,
+    rateLimiter,
+    () => gameSessions.getAllSessions().length,
+    cache,
+  );
   const gameSessions = new GameSessionManager(
     connections,
     async (tableId, p1UserId, p2UserId, winner) => {
@@ -211,8 +223,27 @@ async function start(): Promise<void> {
     connections.remove(connectionId);
   }
 
-  const wss = new WebSocketServer({ port: env.WS_PORT });
+  registerAdminRoutes(app, prisma);
+  registerAdminTableGameRoutes(app, prisma, tables, gameSessions);
+  registerNotificationRoutes(app, prisma, notifications);
+  registerAdminNotificationRoutes(app, prisma, notifications, connections, rooms, tables);
+  registerSubscriptionRoutes(app, prisma, subscriptions);
+  registerAdminSubscriptionRoutes(app, prisma, subscriptions);
+  registerTournamentRoutes(app, prisma, tournaments);
+  registerAdminTournamentRoutes(app, prisma, tournaments);
+  registerSocialRoutes(app, prisma, social);
+  registerAdminSocialRoutes(app, prisma, social);
+  registerProgressionRoutes(app, prisma, xp, achievements, missions);
+  registerAdminProgressionRoutes(app, prisma);
+  registerSeasonRoutes(app, prisma, seasons);
+  registerAdminSeasonRoutes(app, prisma, seasons);
+  registerAdminSecurityRoutes(app, prisma, security, sessions, rateLimiter, monitoring);
+
+  await app.listen({ port: env.HTTP_PORT, host: '0.0.0.0' });
+
+  const wss = new WebSocketServer({ server: app.server });
   monitoring.setWsServer(wss);
+  registerHealthCheck(app, prisma, wss, monitoring, cache);
 
   wss.on('connection', (socket: WebSocket) => {
     const connection = connections.add(
@@ -240,26 +271,8 @@ async function start(): Promise<void> {
     });
   });
 
-  registerAdminRoutes(app, prisma);
-  registerAdminTableGameRoutes(app, prisma, tables, gameSessions);
-  registerNotificationRoutes(app, prisma, notifications);
-  registerAdminNotificationRoutes(app, prisma, notifications, connections, rooms, tables);
-  registerSubscriptionRoutes(app, prisma, subscriptions);
-  registerAdminSubscriptionRoutes(app, prisma, subscriptions);
-  registerTournamentRoutes(app, prisma, tournaments);
-  registerAdminTournamentRoutes(app, prisma, tournaments);
-  registerSocialRoutes(app, prisma, social);
-  registerAdminSocialRoutes(app, prisma, social);
-  registerProgressionRoutes(app, prisma, xp, achievements, missions);
-  registerAdminProgressionRoutes(app, prisma);
-  registerSeasonRoutes(app, prisma, seasons);
-  registerAdminSeasonRoutes(app, prisma, seasons);
-  registerAdminSecurityRoutes(app, prisma, security, sessions, rateLimiter, monitoring);
-  registerHealthCheck(app, prisma, wss, monitoring, cache);
-
-  await app.listen({ port: env.HTTP_PORT, host: '0.0.0.0' });
   app.log.info(`HTTP server listening on port ${env.HTTP_PORT}`);
-  app.log.info(`WebSocket server listening on port ${env.WS_PORT}`);
+  app.log.info(`WebSocket server sharing HTTP server`);
 
   const shutdownTimeout = env.SHUTDOWN_TIMEOUT_MS;
 
