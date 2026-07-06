@@ -24,6 +24,8 @@ RUN apk add --no-cache tini
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 COPY --from=builder /app/apps/game-server/package.json ./
+COPY --from=builder /app/packages/ ./packages/
+COPY --from=builder /app/node_modules/ ./node_modules/
 COPY --from=builder /app/apps/game-server/dist/ ./dist/
 
 USER appuser

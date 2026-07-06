@@ -5,5 +5,5 @@ export default defineConfig({
   format: ['esm'],
   clean: true,
   splitting: false,
-  noExternal: [/./],
+  external: ['fastify', '@fastify/*', 'ws', 'prisma', '@prisma/client', 'events', 'node:*'],
 });
