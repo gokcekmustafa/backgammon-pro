@@ -23,10 +23,20 @@ ENV NODE_ENV=production
 RUN apk add --no-cache tini
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
+# DIAG: before any COPY
+RUN echo "=== DIAG before COPY ===" && \
+    (test -d node_modules/jsonwebtoken && echo "jsonwebtoken OK" || echo "jsonwebtoken MISSING") && \
+    (ls node_modules/.pnpm/ 2>&1 | grep jsonwebtoken || echo "NO_pnpm_jsonwebtoken") && \
+    true
+
 COPY --from=builder /app/packages/ ./packages/
 COPY --from=builder /app/apps/game-server/dist/ ./dist/
 
-RUN test -d node_modules/jsonwebtoken && echo "jsonwebtoken OK" || (echo "jsonwebtoken MISSING" && exit 1)
+# DIAG: after COPY
+RUN echo "=== DIAG after COPY ===" && \
+    (test -d node_modules/jsonwebtoken && echo "jsonwebtoken OK" || echo "jsonwebtoken MISSING") && \
+    (ls node_modules/.pnpm/ 2>&1 | grep jsonwebtoken || echo "NO_pnpm_jsonwebtoken") && \
+    true
 
 USER appuser
 EXPOSE 3001 3002
