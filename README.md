@@ -75,4 +75,4 @@ See [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) for the complete reference.
 
 ## License
 
-Proprietary. All rights reserved.
+Proprietary.All rights reserved.
