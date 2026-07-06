@@ -23,11 +23,21 @@ ENV NODE_ENV=production
 RUN apk add --no-cache tini
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
+RUN ls -la node_modules/jsonwebtoken 2>&1 || echo "BEFORE_PRUNE: jsonwebtoken NOT FOUND"
+RUN node -e "console.log('BEFORE_PRUNE:', require.resolve('jsonwebtoken'))" 2>&1 || echo "BEFORE_PRUNE: jsonwebtoken CJS resolve FAILED"
+
 RUN pnpm prune --prod
+
+RUN ls -la node_modules/jsonwebtoken 2>&1 || echo "AFTER_PRUNE: jsonwebtoken NOT FOUND"
+RUN node -e "console.log('AFTER_PRUNE:', require.resolve('jsonwebtoken'))" 2>&1 || echo "AFTER_PRUNE: jsonwebtoken CJS resolve FAILED"
+RUN node --input-type=module -e "import('jsonwebtoken').then(()=>{console.log('AFTER_PRUNE: jsonwebtoken ESM OK');process.exit(0)}).catch(e=>{console.error('AFTER_PRUNE: jsonwebtoken ESM FAIL:',e.message);process.exit(0)})"
 
 COPY --from=builder /app/packages/ ./packages/
 COPY --from=builder /app/apps/game-server/package.json ./
 COPY --from=builder /app/apps/game-server/dist/ ./dist/
+
+RUN node -e "console.log('FINAL:', require.resolve('jsonwebtoken'))" 2>&1 || echo "FINAL: jsonwebtoken CJS resolve FAILED"
+RUN node --input-type=module -e "import('jsonwebtoken').then(()=>{console.log('FINAL: jsonwebtoken ESM OK');process.exit(0)}).catch(e=>{console.error('FINAL: jsonwebtoken ESM FAIL:',e.message);process.exit(0)})"
 
 USER appuser
 EXPOSE 3001 3002
