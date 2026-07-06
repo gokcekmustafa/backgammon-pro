@@ -15,7 +15,7 @@ FROM deps AS builder
 COPY apps/game-server/tsconfig.json ./apps/game-server/
 COPY apps/game-server/tsup.config.ts ./apps/game-server/
 COPY apps/game-server/src/ ./apps/game-server/src/
-RUN pnpm --filter @backgammon/game-server... run build --if-present
+RUN pnpm -r run build
 
 FROM node:20-alpine AS runner
 ENV NODE_ENV=production
