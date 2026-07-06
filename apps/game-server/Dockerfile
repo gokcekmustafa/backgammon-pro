@@ -15,8 +15,8 @@ FROM deps AS builder
 COPY apps/game-server/tsconfig.json ./apps/game-server/
 COPY apps/game-server/tsup.config.ts ./apps/game-server/
 COPY apps/game-server/src/ ./apps/game-server/src/
-COPY packages/ ./packages/
 RUN pnpm --filter @backgammon/database run build
+RUN pnpm --filter @backgammon/game-engine run build
 RUN pnpm --filter @backgammon/game-server run build
 
 FROM node:20-alpine AS runner
@@ -26,6 +26,7 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 COPY --from=builder /app/apps/game-server/dist/ ./dist/
 COPY --from=builder /app/packages/database/dist/ ./node_modules/@backgammon/database/dist/
+COPY --from=builder /app/packages/game-engine/dist/ ./node_modules/@backgammon/game-engine/dist/
 COPY --from=builder /app/node_modules/ ./node_modules/
 
 USER appuser
