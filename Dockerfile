@@ -17,15 +17,16 @@ COPY apps/game-server/tsup.config.ts ./apps/game-server/
 COPY apps/game-server/src/ ./apps/game-server/src/
 RUN pnpm -r run build
 
-FROM node:20-alpine AS runner
+FROM deps AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 RUN apk add --no-cache tini
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-COPY --from=builder /app/apps/game-server/package.json ./
+RUN pnpm prune --prod
+
 COPY --from=builder /app/packages/ ./packages/
-COPY --from=builder /app/node_modules/ ./node_modules/
+COPY --from=builder /app/apps/game-server/package.json ./
 COPY --from=builder /app/apps/game-server/dist/ ./dist/
 
 USER appuser
