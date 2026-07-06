@@ -28,7 +28,7 @@ export default function BoardArea() {
   };
 
   return (
-    <div className="flex items-center justify-center w-full max-w-lg mx-auto">
+    <div className="flex items-center justify-center w-full max-w-xl mx-auto">
       <div className="w-full">
         <GameBoard
           gameState={gameState}

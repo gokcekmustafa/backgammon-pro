@@ -16,10 +16,10 @@ export default function RoomCard({
   return (
     <button
       onClick={onClick}
-      className={`w-full rounded-lg border px-4 py-3 text-left transition-colors ${
+      className={`w-full rounded-lg border px-4 py-3 text-left transition-all ${
         isActive
-          ? 'border-amber-500 bg-amber-500/10'
-          : 'border-stone-800 bg-stone-900 hover:bg-stone-800'
+          ? 'border-amber-500 bg-amber-500/10 shadow-sm shadow-amber-500/10'
+          : 'border-stone-800 bg-stone-900 hover:bg-stone-800 hover:border-stone-700'
       }`}
     >
       <p className={`text-sm font-semibold ${isActive ? 'text-amber-400' : 'text-stone-200'}`}>

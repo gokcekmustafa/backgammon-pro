@@ -56,7 +56,9 @@ export default function TableCard({
   const canCancel = status === 'open' && isJoined && playerCount === 1;
 
   return (
-    <div className={`rounded-lg border p-4 ${statusBg[status]}`}>
+    <div
+      className={`rounded-lg border p-4 transition-shadow hover:shadow-md hover:shadow-amber-500/5 ${statusBg[status]}`}
+    >
       <div className="flex items-center justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">

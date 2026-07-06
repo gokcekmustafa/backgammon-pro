@@ -572,23 +572,56 @@ export default function GameBoard({
     <svg
       ref={svgRef}
       viewBox={`0 0 ${bw} ${bh}`}
+      width={bw}
+      height={bh}
       className="game-board-svg"
-      style={{ width: '100%', height: 'auto', display: 'block', touchAction: 'none' }}
+      style={{
+        width: '100%',
+        height: 'auto',
+        aspectRatio: `${bw}/${bh}`,
+        display: 'block',
+        touchAction: 'none',
+      }}
       role="application"
       aria-label="Backgammon game board"
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onLostPointerCapture={handleLostPointerCapture}
     >
+      <defs>
+        <linearGradient id="board-bg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#1f6b32" />
+          <stop offset="50%" stop-color="#1a5c2a" />
+          <stop offset="100%" stop-color="#154d23" />
+        </linearGradient>
+      </defs>
       <rect
         x={0}
         y={0}
         width={bw}
         height={bh}
         rx={12}
-        fill={BOARD_FILL}
+        fill="url(#board-bg)"
         stroke={BOARD_STROKE}
         strokeWidth={4}
+      />
+      <line
+        x1={0}
+        y1={bh / 2}
+        x2={bw}
+        y2={bh / 2}
+        stroke="#000"
+        strokeWidth={2}
+        strokeOpacity={0.3}
+      />
+      <line
+        x1={0}
+        y1={bh / 2}
+        x2={bw}
+        y2={bh / 2}
+        stroke="#fff"
+        strokeWidth={1}
+        strokeOpacity={0.15}
       />
       {triangleElements}
       <rect x={geometry.bar.x} y={0} width={geometry.bar.width} height={bh} fill={BAR_FILL} />

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useTheme } from '@/providers/ThemeProvider';
 import { useSettings, type AnimationSpeed } from '@/providers/SettingsProvider';
-import { useTranslation } from '@/lib/i18n';
+import { useTranslation, useLocale } from '@/lib/i18n';
 
 function SettingCard({ children }: { children: React.ReactNode }) {
   return (
@@ -47,6 +47,7 @@ export default function Settings() {
   const { theme, setTheme } = useTheme();
   const { soundEnabled, setSoundEnabled, animationSpeed, setAnimationSpeed } = useSettings();
   const t = useTranslation();
+  const { locale, setLocale } = useLocale();
 
   const themeOptions: Array<{ value: 'light' | 'dark' | 'system'; label: string }> = [
     { value: 'light', label: t.settings.themeLight },
@@ -124,12 +125,26 @@ export default function Settings() {
 
         {/* Language */}
         <SettingCard>
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-sm font-semibold text-stone-300">{t.settings.language}</h2>
-              <p className="text-xs text-stone-500">{t.settings.languageEnglish}</p>
-            </div>
-            <span className="rounded bg-stone-800 px-2 py-0.5 text-xs text-stone-500">English</span>
+          <h2 className="mb-3 text-sm font-semibold text-stone-300">{t.settings.language}</h2>
+          <div className="flex gap-2" role="radiogroup" aria-label={t.settings.language}>
+            {[
+              { value: 'en' as const, label: t.settings.languageEnglish },
+              { value: 'tr' as const, label: t.settings.languageTurkish },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                role="radio"
+                aria-checked={locale === opt.value}
+                onClick={() => setLocale(opt.value)}
+                className={`rounded-lg border px-4 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 ${
+                  locale === opt.value
+                    ? 'border-amber-500 bg-amber-500/10 text-amber-500'
+                    : 'border-stone-700 text-stone-400 hover:text-stone-100'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
         </SettingCard>
       </div>

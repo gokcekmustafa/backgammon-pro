@@ -1,1 +1,1 @@
-export { I18nProvider, useTranslation } from './context';
+export { I18nProvider, useTranslation, useLocale } from './context';

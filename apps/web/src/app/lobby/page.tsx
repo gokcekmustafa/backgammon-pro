@@ -111,7 +111,7 @@ export default function Lobby() {
 
   return (
     <div className="mx-auto flex h-[calc(100vh-4rem)] max-w-6xl flex-col lg:flex-row">
-      <aside className="border-stone-800 p-4 lg:w-56 lg:border-r">
+      <aside className="page-card m-4 p-4 lg:mr-0 lg:w-56 lg:rounded-r-none lg:border-r lg:border-stone-800">
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-500">
           Rooms
         </h2>
@@ -136,7 +136,7 @@ export default function Lobby() {
       </aside>
 
       <section className="flex flex-1 flex-col overflow-hidden p-4">
-        <div className="flex items-center justify-between">
+        <div className="page-card flex items-center justify-between p-4">
           <h2 className="text-lg font-bold text-stone-100">
             {activeRoom?.name ?? 'Select a room'}
           </h2>
@@ -204,7 +204,7 @@ export default function Lobby() {
         </div>
       </section>
 
-      <aside className="border-stone-800 p-4 lg:w-72 lg:border-l">
+      <aside className="page-card m-4 ml-0 p-4 lg:w-72 lg:rounded-l-none lg:border-l lg:border-stone-800">
         <div className="h-full">
           <ChatPanel roomId={activeRoomId ?? undefined} username={user?.displayName} />
         </div>

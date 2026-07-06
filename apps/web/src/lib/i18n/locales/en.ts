@@ -83,6 +83,7 @@ const en = {
     animationOff: 'Off',
     language: 'Language',
     languageEnglish: 'English',
+    languageTurkish: 'Turkish',
   },
   progression: {
     title: 'Progression',
