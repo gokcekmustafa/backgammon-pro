@@ -20,7 +20,7 @@ RUN pnpm -r run build
 FROM deps AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-RUN apk add --no-cache tini
+RUN apk add --no-cache tini openssl1.1-compat
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 COPY --from=builder /app/packages/ ./packages/
