@@ -1,4 +1,4 @@
-FROM node:20-alpine AS base
+FROM node:20-bookworm-slim AS base
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 WORKDIR /app
 
@@ -20,13 +20,11 @@ RUN pnpm -r run build
 FROM deps AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-RUN apk add --no-cache tini openssl1.1-compat
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN groupadd --system appgroup && useradd --system --gid appgroup appuser
 
 COPY --from=builder /app/packages/ ./packages/
 COPY --from=builder /app/apps/game-server/dist/ ./apps/game-server/dist/
 
 USER appuser
 EXPOSE 3001 3002
-ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["node", "apps/game-server/dist/index.js"]
