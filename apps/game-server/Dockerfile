@@ -10,6 +10,7 @@ COPY apps/game-server/package.json ./apps/game-server/
 COPY packages/ ./packages/
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @backgammon/database run prisma:generate
+RUN pnpm --filter @backgammon/database exec prisma db push --accept-data-loss
 
 FROM deps AS builder
 COPY apps/game-server/tsconfig.json ./apps/game-server/
