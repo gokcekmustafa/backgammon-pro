@@ -23,10 +23,14 @@ ENV NODE_ENV=production
 RUN apk add --no-cache tini
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/pnpm-lock.yaml ./
+COPY --from=builder /app/pnpm-workspace.yaml ./
+COPY --from=builder /app/apps/game-server/package.json ./apps/game-server/
+
 RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
 COPY --from=builder /app/packages/ ./packages/
-COPY --from=builder /app/apps/game-server/package.json ./
 COPY --from=builder /app/apps/game-server/dist/ ./dist/
 
 USER appuser
