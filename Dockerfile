@@ -18,16 +18,20 @@ COPY apps/game-server/src/ ./apps/game-server/src/
 RUN pnpm -r run build
 
 FROM node:20-alpine AS runner
+WORKDIR /app
 ENV NODE_ENV=production
 RUN apk add --no-cache tini
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-COPY --from=builder /app/apps/game-server/dist/ ./dist/
-COPY --from=builder /app/packages/database/dist/ ./node_modules/@backgammon/database/dist/
-COPY --from=builder /app/packages/game-engine/dist/ ./node_modules/@backgammon/game-engine/dist/
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/pnpm-lock.yaml ./
+COPY --from=builder /app/pnpm-workspace.yaml ./
+COPY --from=builder /app/apps/game-server/package.json ./apps/game-server/
+COPY --from=builder /app/packages/ ./packages/
 COPY --from=builder /app/node_modules/ ./node_modules/
+COPY --from=builder /app/apps/game-server/dist/ ./apps/game-server/dist/
 
 USER appuser
 EXPOSE 3001 3002
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["node", "dist/index.js"]
+CMD ["node", "apps/game-server/dist/index.js"]
