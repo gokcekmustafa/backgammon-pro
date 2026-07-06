@@ -3,7 +3,11 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src",
-    "types": ["node"]
+    "types": ["node"],
+    "paths": {
+      "@backgammon/database": ["../../packages/database/src/index.ts"],
+      "@backgammon/game-engine": ["../../packages/game-engine/src/index.ts"]
+    }
   },
   "include": ["src"]
 }
