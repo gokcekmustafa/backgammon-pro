@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { api } from '@/lib/api';
+import { api, attemptRefresh } from '@/lib/api';
 import { getStoredUser, setStoredAuth, clearStoredAuth, type AuthUser } from '@/lib/auth';
 
 interface AuthContextType {
@@ -31,9 +31,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const stored = getStoredUser();
     if (stored) {
       setUser(stored);
+      refreshAccessToken();
+    } else {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
+
+  async function refreshAccessToken() {
+    try {
+      await attemptRefresh();
+    } catch {
+      // ignore
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   const login = useCallback(
     async (email: string, password: string) => {
