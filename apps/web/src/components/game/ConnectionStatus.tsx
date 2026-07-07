@@ -1,19 +1,21 @@
 'use client';
 
+import { useTranslation } from '@/lib/i18n';
 import { useGame } from '@/providers/GameProvider';
 import { GamePhase, TurnPhase } from '@backgammon/game-engine';
 
 export default function ConnectionStatus() {
+  const t = useTranslation();
   const { gameState, gameOver, winner, localPlayer, connectionStatus } = useGame();
 
   return (
     <div aria-live="polite" aria-atomic="true">
       {connectionStatus === 'opponent_disconnected' && (
-        <div className="text-xs font-semibold text-red-400">Opponent disconnected</div>
+        <div className="text-xs font-semibold text-red-400">{t.table.opponentDisconnected}</div>
       )}
 
       {connectionStatus === 'opponent_reconnected' && (
-        <div className="text-xs font-semibold text-emerald-400">Reconnected</div>
+        <div className="text-xs font-semibold text-emerald-400">{t.table.reconnected}</div>
       )}
 
       {connectionStatus !== 'opponent_disconnected' &&
@@ -21,10 +23,10 @@ export default function ConnectionStatus() {
         gameOver && (
           <div className="text-xs font-semibold text-amber-500">
             {winner
-              ? `Player ${winner} wins!`
+              ? `Player ${winner}${t.table.won}`
               : gameState.phase === GamePhase.Cancelled
-                ? 'Game cancelled'
-                : 'Game over'}
+                ? t.table.gameCancelled
+                : t.table.gameOver}
           </div>
         )}
 
@@ -32,15 +34,15 @@ export default function ConnectionStatus() {
         <div
           className={`text-xs font-semibold uppercase tracking-wider ${gameState.currentPlayer === localPlayer ? 'text-emerald-400' : 'text-stone-400'}`}
         >
-          {gameState.currentPlayer === localPlayer ? 'Your turn' : "Opponent's turn"}
+          {gameState.currentPlayer === localPlayer ? t.table.yourTurn : t.table.opponentTurn}
         </div>
       )}
 
       {!gameOver && (connectionStatus === 'connected' || !localPlayer) && !localPlayer && (
         <div className="text-[10px] font-medium uppercase tracking-wider text-stone-500">
           {gameState.turn.phase === TurnPhase.WaitingForRoll
-            ? 'Roll the dice to start your turn'
-            : `Player ${gameState.currentPlayer}'s move`}
+            ? t.table.rollToStart
+            : t.table.playerMove.replace('{player}', gameState.currentPlayer.toString())}
         </div>
       )}
     </div>

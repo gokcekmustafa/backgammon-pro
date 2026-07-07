@@ -8,6 +8,7 @@ import RoomCard from '@/components/lobby/RoomCard';
 import TableCard from '@/components/lobby/TableCard';
 import ChatPanel from '@/components/lobby/ChatPanel';
 import { useAuth } from '@/providers/AuthProvider';
+import { useTranslation } from '@/lib/i18n';
 import { useRooms, type Room } from '@/hooks/useRooms';
 import {
   useTables,
@@ -29,6 +30,7 @@ function LoadingSpinner() {
 export default function Lobby() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
+  const t = useTranslation();
 
   const { data: roomsData, isLoading: roomsLoading, isError: roomsError } = useRooms();
   const rooms: Room[] = roomsData?.rooms ?? [];
@@ -113,12 +115,12 @@ export default function Lobby() {
     <div className="mx-auto flex h-[calc(100vh-4rem)] max-w-6xl flex-col lg:flex-row">
       <aside className="page-card m-4 p-4 lg:mr-0 lg:w-56 lg:rounded-r-none lg:border-r lg:border-stone-800">
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-500">
-          Rooms
+          {t.lobby.rooms}
         </h2>
         {roomsLoading ? (
           <LoadingSpinner />
         ) : roomsError ? (
-          <p className="text-xs text-red-400">Failed to load rooms</p>
+          <p className="text-xs text-red-400">{t.lobby.failedRooms}</p>
         ) : (
           <div className="flex gap-2 overflow-x-auto lg:flex-col">
             {rooms.map((room) => (
@@ -138,21 +140,21 @@ export default function Lobby() {
       <section className="flex flex-1 flex-col overflow-hidden p-4">
         <div className="page-card flex items-center justify-between p-4">
           <h2 className="text-lg font-bold text-stone-100">
-            {activeRoom?.name ?? 'Select a room'}
+            {activeRoom?.name ?? t.lobby.selectRoom}
           </h2>
           <div className="flex gap-2">
             <Button variant="ghost" href="/leaderboard">
-              Leaderboard
+              {t.lobby.leaderboard}
             </Button>
             <Button variant="ghost" onClick={() => router.push('/table?ai=true')}>
-              Play vs Computer
+              {t.lobby.playVsComputer}
             </Button>
             <Button
               variant="primary"
               onClick={handleCreateTable}
               disabled={createTable.isPending || !activeRoomId}
             >
-              Create Table
+              {t.lobby.createTable}
             </Button>
           </div>
         </div>
@@ -162,25 +164,25 @@ export default function Lobby() {
             <LoadingSpinner />
           ) : tablesError ? (
             <div className="text-center text-sm text-red-400">
-              Failed to load tables.{' '}
+              {t.lobby.failedTables}{' '}
               <button
                 onClick={() => window.location.reload()}
                 className="text-amber-500 hover:text-amber-400"
               >
-                Retry
+                {t.common.retry}
               </button>
             </div>
           ) : tables.length === 0 ? (
             <EmptyState
-              title="No tables yet"
-              description="Create a table to start playing."
+              title={t.lobby.noTablesYet}
+              description={t.lobby.noTablesDesc}
               action={
                 <Button
                   variant="secondary"
                   onClick={handleCreateTable}
                   disabled={createTable.isPending}
                 >
-                  Create Table
+                  {t.lobby.createTable}
                 </Button>
               }
             />
@@ -188,7 +190,7 @@ export default function Lobby() {
             tables.map((table) => (
               <TableCard
                 key={table.id}
-                name={table.name ?? 'Unnamed'}
+                name={table.name ?? t.lobby.unnamed}
                 status={table.status}
                 playerCount={table.participantCount}
                 maxPlayers={2}

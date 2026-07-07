@@ -10,10 +10,11 @@ import { useAuth } from '@/providers/AuthProvider';
 import { ApiError } from '@/lib/api';
 
 function LoadingSpinner() {
+  const t = useTranslation();
   return (
     <div className="flex items-center justify-center py-12" role="status">
       <div className="h-6 w-6 animate-spin rounded-full border-2 border-stone-600 border-t-amber-500" />
-      <span className="sr-only">Loading...</span>
+      <span className="sr-only">{t.common.loading}</span>
     </div>
   );
 }
@@ -31,6 +32,7 @@ function Avatar({
   onUpload?: (dataUrl: string) => void;
   canEdit?: boolean;
 }) {
+  const t = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const sizeClasses = size === 'lg' ? 'h-20 w-20 text-2xl' : 'h-8 w-8 text-sm';
   const initials = (displayName ?? '?').charAt(0).toUpperCase();
@@ -68,7 +70,7 @@ function Avatar({
           <button
             onClick={() => inputRef.current?.click()}
             className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-amber-500 text-xs font-bold text-stone-950 shadow transition-colors hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
-            aria-label="Change avatar"
+            aria-label={t.profile.changeAvatar}
           >
             ✎
           </button>
@@ -193,7 +195,7 @@ export default function PlayerProfile() {
           ? err.message
           : err instanceof Error
             ? err.message
-            : 'Failed to upload avatar';
+            : t.profile.uploadFailed;
       setUploadError(message);
     } finally {
       setUploading(false);
@@ -214,7 +216,7 @@ export default function PlayerProfile() {
     );
   }
 
-  const displayName = stats.displayName ?? stats.username ?? 'Unknown';
+  const displayName = stats.displayName ?? stats.username ?? t.match.unknown;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">

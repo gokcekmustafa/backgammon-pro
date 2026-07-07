@@ -1,8 +1,10 @@
 'use client';
 
+import { useTranslation } from '@/lib/i18n';
 import { useGame } from '@/providers/GameProvider';
 
 export default function DiceArea() {
+  const t = useTranslation();
   const { gameState, canRoll, rollDiceAction } = useGame();
   const roll = gameState.diceRoll;
   const remaining = gameState.remainingDice;
@@ -19,7 +21,7 @@ export default function DiceArea() {
         disabled={!canRoll}
         className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-stone-950 hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
       >
-        {canRoll ? 'Roll Dice' : 'Rolled'}
+        {canRoll ? t.table.rollDice : t.table.rolled}
       </button>
       {roll ? (
         <div className="flex gap-1.5">

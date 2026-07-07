@@ -1,4 +1,9 @@
+'use client';
+
+import { useTranslation } from '@/lib/i18n';
+
 export default function RotatePrompt() {
+  const t = useTranslation();
   return (
     <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-6 text-center">
       <div>
@@ -17,10 +22,8 @@ export default function RotatePrompt() {
             />
           </svg>
         </div>
-        <p className="text-lg font-semibold text-stone-300">
-          Please rotate your device to landscape.
-        </p>
-        <p className="mt-2 text-sm text-stone-500">The game table requires a wider screen.</p>
+        <p className="text-lg font-semibold text-stone-300">{t.table.rotatePrompt}</p>
+        <p className="mt-2 text-sm text-stone-500">{t.table.rotateDesc}</p>
       </div>
     </div>
   );

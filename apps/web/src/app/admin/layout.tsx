@@ -5,31 +5,34 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/providers/AuthProvider';
 import { api, ApiError } from '@/lib/api';
-
-const navItems = [
-  { href: '/admin', label: 'Dashboard', icon: '▦' },
-  { href: '/admin/seasons', label: 'Seasons', icon: '◈' },
-  { href: '/admin/security', label: 'Security', icon: '◈' },
-  { href: '/admin/tournaments', label: 'Tournaments', icon: '🏆' },
-  { href: '/admin/users', label: 'Users', icon: '◎' },
-  { href: '/admin/moderators', label: 'Moderators', icon: '★' },
-  { href: '/admin/banned', label: 'Banned', icon: '⊘' },
-  { href: '/admin/tables', label: 'Live Tables', icon: '⊞' },
-  { href: '/admin/games', label: 'Live Games', icon: '♟' },
-  { href: '/admin/audit', label: 'Audit Log', icon: '☰' },
-];
+import { useTranslation } from '@/lib/i18n';
 
 function Sidebar() {
   const pathname = usePathname();
+  const t = useTranslation();
+
+  const navItems = [
+    { href: '/admin', label: t.admin.dashboard, icon: '▦' },
+    { href: '/admin/seasons', label: t.admin.seasons, icon: '◈' },
+    { href: '/admin/security', label: t.admin.security, icon: '◈' },
+    { href: '/admin/tournaments', label: t.admin.tournaments, icon: '🏆' },
+    { href: '/admin/users', label: t.admin.users, icon: '◎' },
+    { href: '/admin/moderators', label: t.admin.moderators, icon: '★' },
+    { href: '/admin/banned', label: t.admin.banned, icon: '⊘' },
+    { href: '/admin/tables', label: t.admin.liveTables, icon: '⊞' },
+    { href: '/admin/games', label: t.admin.liveGames, icon: '♟' },
+    { href: '/admin/audit', label: t.admin.auditLog, icon: '☰' },
+  ];
 
   return (
     <aside className="w-56 shrink-0 border-r border-stone-800 bg-stone-900 p-4">
       <Link href="/admin" className="mb-6 block text-sm font-bold tracking-tight text-amber-500">
-        Admin Panel
+        {t.admin.title}
       </Link>
       <nav className="flex flex-col gap-1">
         {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
+          const isActive =
+            pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
           return (
             <Link
               key={item.href}
@@ -53,6 +56,7 @@ function Sidebar() {
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const t = useTranslation();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [checking, setChecking] = useState(true);
 
@@ -86,7 +90,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     checkAdmin();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [isLoading, isAuthenticated, router]);
 
   if (isLoading || checking) {
@@ -103,10 +109,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return (
       <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-stone-100">Unauthorized</h1>
-          <p className="mt-2 text-stone-400">You do not have access to this area.</p>
+          <h1 className="text-2xl font-bold text-stone-100">{t.admin.unauthorized}</h1>
+          <p className="mt-2 text-stone-400">{t.admin.noAccess}</p>
           <Link href="/lobby" className="mt-4 inline-block text-amber-500 hover:text-amber-400">
-            Return to Lobby
+            {t.admin.returnToLobby}
           </Link>
         </div>
       </div>

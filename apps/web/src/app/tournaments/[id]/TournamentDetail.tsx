@@ -2,17 +2,14 @@
 
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { useTournament, useTournamentStatus, useRegisterTournament, useUnregisterTournament } from '@/hooks/useTournaments';
+import {
+  useTournament,
+  useTournamentStatus,
+  useRegisterTournament,
+  useUnregisterTournament,
+} from '@/hooks/useTournaments';
 import Button from '@/components/Button';
-
-const statusLabels: Record<string, string> = {
-  DRAFT: 'Draft',
-  REGISTRATION: 'Registration Open',
-  READY: 'Ready',
-  IN_PROGRESS: 'In Progress',
-  FINISHED: 'Finished',
-  CANCELLED: 'Cancelled',
-};
+import { useTranslation } from '@/lib/i18n';
 
 const statusColors: Record<string, string> = {
   DRAFT: 'bg-stone-800 text-stone-400',
@@ -23,45 +20,78 @@ const statusColors: Record<string, string> = {
   CANCELLED: 'bg-red-900/30 text-red-400',
 };
 
-const typeLabels: Record<string, string> = {
-  SINGLE_ELIMINATION: 'Single Elimination',
-  DOUBLE_ELIMINATION: 'Double Elimination',
-  ROUND_ROBIN: 'Round Robin',
-};
-
-function BracketView({ bracket }: { bracket: { round: number; matches: {
-  id: string; round: number; matchIndex: number; player1Id: string | null; player2Id: string | null;
-  winnerId: string | null; status: string; player1Score: number; player2Score: number;
-  player1Name?: string; player2Name?: string;
-}[] }[] }) {
+function BracketView({
+  bracket,
+}: {
+  bracket: {
+    round: number;
+    matches: {
+      id: string;
+      round: number;
+      matchIndex: number;
+      player1Id: string | null;
+      player2Id: string | null;
+      winnerId: string | null;
+      status: string;
+      player1Score: number;
+      player2Score: number;
+      player1Name?: string;
+      player2Name?: string;
+    }[];
+  }[];
+}) {
+  const t = useTranslation();
   return (
     <div className="space-y-6">
       {bracket.map((round) => (
         <div key={round.round}>
-          <h3 className="mb-2 text-sm font-semibold text-stone-400">Round {round.round}</h3>
+          <h3 className="mb-2 text-sm font-semibold text-stone-400">
+            {t.tournaments.roundPrefix}
+            {round.round}
+          </h3>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {round.matches.map((match) => (
-              <div key={match.id} className="rounded-lg border border-stone-800 bg-stone-900/50 p-3">
+              <div
+                key={match.id}
+                className="rounded-lg border border-stone-800 bg-stone-900/50 p-3"
+              >
                 <div className="flex items-center justify-between">
-                  <span className={match.winnerId === match.player1Id ? 'font-medium text-amber-500' : 'text-stone-300'}>
-                    {match.player1Name ?? 'TBD'}
+                  <span
+                    className={
+                      match.winnerId === match.player1Id
+                        ? 'font-medium text-amber-500'
+                        : 'text-stone-300'
+                    }
+                  >
+                    {match.player1Name ?? t.tournaments.tbd}
                   </span>
                   <span className="text-xs text-stone-500">{match.player1Score}</span>
                 </div>
                 <div className="my-1 border-t border-stone-800" />
                 <div className="flex items-center justify-between">
-                  <span className={match.winnerId === match.player2Id ? 'font-medium text-amber-500' : 'text-stone-300'}>
-                    {match.player2Name ?? 'TBD'}
+                  <span
+                    className={
+                      match.winnerId === match.player2Id
+                        ? 'font-medium text-amber-500'
+                        : 'text-stone-300'
+                    }
+                  >
+                    {match.player2Name ?? t.tournaments.tbd}
                   </span>
                   <span className="text-xs text-stone-500">{match.player2Score}</span>
                 </div>
                 <div className="mt-1 text-center">
-                  <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${
-                    match.status === 'PENDING' ? 'bg-stone-800 text-stone-400' :
-                    match.status === 'IN_PROGRESS' ? 'bg-green-900/30 text-green-400' :
-                    match.status === 'COMPLETED' ? 'bg-blue-900/30 text-blue-400' :
-                    'bg-red-900/30 text-red-400'
-                  }`}>
+                  <span
+                    className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                      match.status === 'PENDING'
+                        ? 'bg-stone-800 text-stone-400'
+                        : match.status === 'IN_PROGRESS'
+                          ? 'bg-green-900/30 text-green-400'
+                          : match.status === 'COMPLETED'
+                            ? 'bg-blue-900/30 text-blue-400'
+                            : 'bg-red-900/30 text-red-400'
+                    }`}
+                  >
                     {match.status.replace('_', ' ')}
                   </span>
                 </div>
@@ -77,6 +107,20 @@ function BracketView({ bracket }: { bracket: { round: number; matches: {
 export default function TournamentDetail() {
   const params = useParams();
   const id = params.id as string;
+  const t = useTranslation();
+  const statusLabels: Record<string, string> = {
+    DRAFT: t.tournaments.status_draft,
+    REGISTRATION: t.tournaments.status_open,
+    READY: t.tournaments.status_ready,
+    IN_PROGRESS: t.tournaments.status_inProgress,
+    FINISHED: t.tournaments.status_finished,
+    CANCELLED: t.tournaments.status_cancelled,
+  };
+  const typeLabels: Record<string, string> = {
+    SINGLE_ELIMINATION: t.tournaments.type_singleElimFull,
+    DOUBLE_ELIMINATION: t.tournaments.type_doubleElimFull,
+    ROUND_ROBIN: t.tournaments.type_roundRobinFull,
+  };
   const { data: tournament, isLoading, isError } = useTournament(id);
   const { data: statusData } = useTournamentStatus(id);
   const register = useRegisterTournament();
@@ -93,9 +137,9 @@ export default function TournamentDetail() {
   if (isError || !tournament) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-8 text-center">
-        <h1 className="text-2xl font-bold text-stone-100">Tournament Not Found</h1>
+        <h1 className="text-2xl font-bold text-stone-100">{t.tournaments.notFound}</h1>
         <Link href="/tournaments" className="mt-4 inline-block text-amber-500 hover:text-amber-400">
-          &larr; Back to Tournaments
+          &larr; {t.tournaments.back}
         </Link>
       </div>
     );
@@ -105,7 +149,9 @@ export default function TournamentDetail() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-      <Link href="/tournaments" className="text-sm text-amber-500 hover:text-amber-400">&larr; Back to Tournaments</Link>
+      <Link href="/tournaments" className="text-sm text-amber-500 hover:text-amber-400">
+        &larr; {t.tournaments.back}
+      </Link>
 
       <div className="mt-4 flex items-start justify-between gap-4">
         <div>
@@ -114,47 +160,61 @@ export default function TournamentDetail() {
             <p className="mt-1 text-sm text-stone-400">{tournament.description}</p>
           )}
         </div>
-        <span className={`shrink-0 rounded-lg px-3 py-1 text-xs font-medium ${statusColors[tournament.status] ?? ''}`}>
+        <span
+          className={`shrink-0 rounded-lg px-3 py-1 text-xs font-medium ${statusColors[tournament.status] ?? ''}`}
+        >
           {statusLabels[tournament.status] ?? tournament.status}
         </span>
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div className="rounded-lg border border-stone-800 bg-stone-900 p-3">
-          <p className="text-xs text-stone-500">Type</p>
+          <p className="text-xs text-stone-500">{t.tournaments.type}</p>
           <p className="text-sm font-medium text-stone-100">{typeLabels[tournament.type]}</p>
         </div>
         <div className="rounded-lg border border-stone-800 bg-stone-900 p-3">
-          <p className="text-xs text-stone-500">Players</p>
-          <p className="text-sm font-medium text-stone-100">{tournament.playerCount}/{tournament.maxPlayers}</p>
+          <p className="text-xs text-stone-500">{t.tournaments.players}</p>
+          <p className="text-sm font-medium text-stone-100">
+            {tournament.playerCount}/{tournament.maxPlayers}
+          </p>
         </div>
         <div className="rounded-lg border border-stone-800 bg-stone-900 p-3">
-          <p className="text-xs text-stone-500">Prize Pool</p>
-          <p className="text-sm font-medium text-stone-100">{tournament.prizePool > 0 ? `$${tournament.prizePool}` : '-'}</p>
+          <p className="text-xs text-stone-500">{t.tournaments.prizePool}</p>
+          <p className="text-sm font-medium text-stone-100">
+            {tournament.prizePool > 0 ? `$${tournament.prizePool}` : '-'}
+          </p>
         </div>
         <div className="rounded-lg border border-stone-800 bg-stone-900 p-3">
-          <p className="text-xs text-stone-500">Entry Fee</p>
-          <p className="text-sm font-medium text-stone-100">{tournament.entryFee > 0 ? `$${tournament.entryFee}` : 'Free'}</p>
+          <p className="text-xs text-stone-500">{t.tournaments.entryFee}</p>
+          <p className="text-sm font-medium text-stone-100">
+            {tournament.entryFee > 0 ? `$${tournament.entryFee}` : t.common.free}
+          </p>
         </div>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div className="rounded-lg border border-stone-800 bg-stone-900 p-3">
-          <p className="text-xs text-stone-500">Starts</p>
-          <p className="text-sm font-medium text-stone-100">{new Date(tournament.startsAt).toLocaleString()}</p>
-        </div>
-        <div className="rounded-lg border border-stone-800 bg-stone-900 p-3">
-          <p className="text-xs text-stone-500">Registration Ends</p>
+          <p className="text-xs text-stone-500">{t.tournaments.starts}</p>
           <p className="text-sm font-medium text-stone-100">
-            {tournament.registrationEndsAt ? new Date(tournament.registrationEndsAt).toLocaleString() : '-'}
+            {new Date(tournament.startsAt).toLocaleString()}
           </p>
         </div>
         <div className="rounded-lg border border-stone-800 bg-stone-900 p-3">
-          <p className="text-xs text-stone-500">Created By</p>
-          <p className="text-sm font-medium text-stone-100">{tournament.createdBy?.displayName ?? 'System'}</p>
+          <p className="text-xs text-stone-500">{t.tournaments.registrationEnds}</p>
+          <p className="text-sm font-medium text-stone-100">
+            {tournament.registrationEndsAt
+              ? new Date(tournament.registrationEndsAt).toLocaleString()
+              : '-'}
+          </p>
         </div>
         <div className="rounded-lg border border-stone-800 bg-stone-900 p-3">
-          <p className="text-xs text-stone-500">Visibility</p>
+          <p className="text-xs text-stone-500">{t.tournaments.createdBy}</p>
+          <p className="text-sm font-medium text-stone-100">
+            {tournament.createdBy?.displayName ?? t.tournaments.system}
+          </p>
+        </div>
+        <div className="rounded-lg border border-stone-800 bg-stone-900 p-3">
+          <p className="text-xs text-stone-500">{t.tournaments.visibility}</p>
           <p className="text-sm font-medium text-stone-100">{tournament.visibility}</p>
         </div>
       </div>
@@ -162,12 +222,16 @@ export default function TournamentDetail() {
       {tournament.status === 'REGISTRATION' && (
         <div className="mt-6">
           {isRegistered ? (
-            <Button variant="secondary" onClick={() => unregister.mutate(id)} disabled={unregister.isPending}>
-              Unregister
+            <Button
+              variant="secondary"
+              onClick={() => unregister.mutate(id)}
+              disabled={unregister.isPending}
+            >
+              {t.tournaments.unregister}
             </Button>
           ) : (
             <Button onClick={() => register.mutate(id)} disabled={register.isPending}>
-              Register
+              {t.tournaments.register}
             </Button>
           )}
         </div>
@@ -175,14 +239,16 @@ export default function TournamentDetail() {
 
       {tournament.prizes.length > 0 && (
         <div className="mt-8">
-          <h2 className="mb-3 text-lg font-bold text-stone-100">Prizes</h2>
+          <h2 className="mb-3 text-lg font-bold text-stone-100">{t.tournaments.prizes}</h2>
           <div className="overflow-x-auto rounded-lg border border-stone-800">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-stone-800 bg-stone-900">
-                  <th className="px-4 py-2 font-semibold text-stone-400">Position</th>
-                  <th className="px-4 py-2 font-semibold text-stone-400">Label</th>
-                  <th className="px-4 py-2 font-semibold text-stone-400">Amount</th>
+                  <th className="px-4 py-2 font-semibold text-stone-400">
+                    {t.tournaments.position}
+                  </th>
+                  <th className="px-4 py-2 font-semibold text-stone-400">{t.tournaments.label}</th>
+                  <th className="px-4 py-2 font-semibold text-stone-400">{t.tournaments.amount}</th>
                 </tr>
               </thead>
               <tbody>
@@ -201,24 +267,37 @@ export default function TournamentDetail() {
 
       {tournament.players.length > 0 && (
         <div className="mt-8">
-          <h2 className="mb-3 text-lg font-bold text-stone-100">Players ({tournament.players.length})</h2>
+          <h2 className="mb-3 text-lg font-bold text-stone-100">
+            Players ({tournament.players.length})
+          </h2>
           <div className="space-y-1">
             {tournament.players.map((p) => (
-              <div key={p.id} className="flex items-center justify-between rounded-lg border border-stone-800 bg-stone-900/50 px-4 py-2">
+              <div
+                key={p.id}
+                className="flex items-center justify-between rounded-lg border border-stone-800 bg-stone-900/50 px-4 py-2"
+              >
                 <div>
-                  <Link href={`/players/${p.userId}`} className="text-sm font-medium text-stone-100 hover:text-amber-500">
+                  <Link
+                    href={`/players/${p.userId}`}
+                    className="text-sm font-medium text-stone-100 hover:text-amber-500"
+                  >
                     {p.displayName}
                   </Link>
                   <span className="ml-2 text-xs text-stone-500">@{p.username}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-stone-500">Seed #{p.seed}</span>
-                  <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${
-                    p.status === 'ACTIVE' ? 'bg-green-900/30 text-green-400' :
-                    p.status === 'ELIMINATED' ? 'bg-red-900/30 text-red-400' :
-                    p.status === 'REGISTERED' ? 'bg-blue-900/30 text-blue-400' :
-                    'bg-stone-800 text-stone-400'
-                  }`}>
+                  <span
+                    className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                      p.status === 'ACTIVE'
+                        ? 'bg-green-900/30 text-green-400'
+                        : p.status === 'ELIMINATED'
+                          ? 'bg-red-900/30 text-red-400'
+                          : p.status === 'REGISTERED'
+                            ? 'bg-blue-900/30 text-blue-400'
+                            : 'bg-stone-800 text-stone-400'
+                    }`}
+                  >
                     {p.status}
                   </span>
                 </div>
@@ -230,7 +309,7 @@ export default function TournamentDetail() {
 
       {tournament.bracket.length > 0 && (
         <div className="mt-8">
-          <h2 className="mb-3 text-lg font-bold text-stone-100">Bracket</h2>
+          <h2 className="mb-3 text-lg font-bold text-stone-100">{t.tournaments.bracket}</h2>
           <BracketView bracket={tournament.bracket} />
         </div>
       )}

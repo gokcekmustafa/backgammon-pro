@@ -1,3 +1,5 @@
+import { useTranslation } from '@/lib/i18n';
+
 interface RoomCardProps {
   name: string;
   description?: string;
@@ -13,6 +15,7 @@ export default function RoomCard({
   isActive,
   onClick,
 }: RoomCardProps) {
+  const t = useTranslation();
   return (
     <button
       onClick={onClick}
@@ -27,7 +30,7 @@ export default function RoomCard({
       </p>
       {description && <p className="mt-0.5 text-xs text-stone-500">{description}</p>}
       <p className={`mt-1 text-xs ${isActive ? 'text-amber-500/70' : 'text-stone-600'}`}>
-        {tableCount} {tableCount === 1 ? 'table' : 'tables'}
+        {tableCount} {tableCount === 1 ? t.common.table : t.common.tables}
       </p>
     </button>
   );

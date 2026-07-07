@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useChat, type ChatMessageData } from '@/hooks/useChat';
+import { useTranslation } from '@/lib/i18n';
 
 interface ChatPanelProps {
   roomId?: string;
@@ -38,6 +39,7 @@ function ChatMessage({ msg }: { msg: ChatMessageData }) {
 }
 
 export default function ChatPanel({ roomId, tableId, username, maxHeight }: ChatPanelProps) {
+  const t = useTranslation();
   const { messages, sendMessage, unreadCount, isConnected, markAsRead } = useChat(
     roomId,
     tableId,
@@ -70,21 +72,21 @@ export default function ChatPanel({ roomId, tableId, username, maxHeight }: Chat
   return (
     <div className="flex h-full flex-col rounded-lg border border-stone-800 bg-stone-900/50">
       <div className="flex items-center justify-between border-b border-stone-800 px-4 py-3">
-        <p className="text-sm font-semibold text-stone-200">Chat</p>
+        <p className="text-sm font-semibold text-stone-200">{t.chat.title}</p>
         <div className="flex items-center gap-2">
           {unreadCount > 0 && (
             <button
               onClick={markAsRead}
               className="rounded-full bg-amber-600 px-2 py-0.5 text-[10px] font-bold text-white"
             >
-              {unreadCount} new
+              {t.chat.newMessages.replace('{count}', `${unreadCount}`)}
             </button>
           )}
           <span
             className={`inline-block h-2 w-2 rounded-full ${
               isConnected ? 'bg-green-500' : 'bg-red-500'
             }`}
-            title={isConnected ? 'Connected' : 'Disconnected'}
+            title={isConnected ? t.chat.connected : t.chat.disconnected}
           />
         </div>
       </div>
@@ -99,7 +101,7 @@ export default function ChatPanel({ roomId, tableId, username, maxHeight }: Chat
         onClick={markAsRead}
       >
         {messages.length === 0 ? (
-          <p className="text-center text-xs text-stone-600">No messages yet</p>
+          <p className="text-center text-xs text-stone-600">{t.chat.noMessages}</p>
         ) : (
           messages.map((msg) => <ChatMessage key={msg.id} msg={msg} />)
         )}
@@ -112,7 +114,7 @@ export default function ChatPanel({ roomId, tableId, username, maxHeight }: Chat
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={isConnected ? 'Type a message...' : 'Connecting...'}
+            placeholder={isConnected ? t.chat.placeholder : t.chat.connecting}
             rows={1}
             maxLength={300}
             disabled={!isConnected}
@@ -123,12 +125,10 @@ export default function ChatPanel({ roomId, tableId, username, maxHeight }: Chat
             disabled={!isConnected || !input.trim()}
             className="shrink-0 self-end rounded-lg bg-amber-600 px-3 py-2 text-xs font-medium text-white hover:bg-amber-500 disabled:bg-stone-800 disabled:text-stone-500"
           >
-            Send
+            {t.chat.send}
           </button>
         </div>
-        <p className="mt-1 text-[10px] text-stone-600">
-          Enter to send &middot; Shift+Enter for new line
-        </p>
+        <p className="mt-1 text-[10px] text-stone-600">{t.chat.enterHint}</p>
       </div>
     </div>
   );

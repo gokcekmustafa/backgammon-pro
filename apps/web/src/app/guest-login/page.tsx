@@ -4,8 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/providers/AuthProvider';
 import { ApiError } from '@/lib/api';
+import { useTranslation } from '@/lib/i18n';
 
 export default function GuestLogin() {
+  const t = useTranslation();
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -20,9 +22,9 @@ export default function GuestLogin() {
       await guestLogin(displayName || undefined);
     } catch (err) {
       if (err instanceof ApiError) {
-        setError((err.body as { error?: string })?.error || 'Login failed');
+        setError((err.body as { error?: string })?.error || t.auth.loginFailed);
       } else {
-        setError('An unexpected error occurred');
+        setError(t.auth.unexpectedError);
       }
     } finally {
       setLoading(false);
@@ -32,8 +34,8 @@ export default function GuestLogin() {
   return (
     <div className="flex items-center justify-center px-4 py-20">
       <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-bold">Play as Guest</h1>
-        <p className="mt-1 text-sm text-stone-400">Pick a display name and jump right in.</p>
+        <h1 className="text-2xl font-bold">{t.auth.guestHeading}</h1>
+        <p className="mt-1 text-sm text-stone-400">{t.auth.guestSubtitle}</p>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">
           {error && (
@@ -44,7 +46,7 @@ export default function GuestLogin() {
 
           <div>
             <label htmlFor="displayName" className="block text-sm font-medium text-stone-300">
-              Display Name
+              {t.auth.displayName}
             </label>
             <input
               id="displayName"
@@ -52,7 +54,7 @@ export default function GuestLogin() {
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               className="mt-1 w-full rounded-lg border border-stone-700 bg-stone-900 px-4 py-2 text-sm text-stone-100 placeholder-stone-500 outline-none focus:border-amber-500"
-              placeholder="Guest"
+              placeholder={t.auth.guestPlaceholder}
             />
           </div>
 
@@ -61,14 +63,14 @@ export default function GuestLogin() {
             disabled={loading}
             className="w-full rounded-lg bg-amber-500 px-4 py-3 text-sm font-semibold text-stone-950 transition-colors hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? 'Entering...' : 'Enter Lobby'}
+            {loading ? t.auth.enteringLobby : t.auth.guestButton}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-stone-500">
-          Want to save your progress?{' '}
+          {t.auth.saveProgress}{' '}
           <Link href="/login" className="text-amber-500 hover:text-amber-400">
-            Sign In
+            {t.auth.signInLink}
           </Link>
         </p>
       </div>

@@ -15,13 +15,15 @@ import Link from 'next/link';
 import { GameProvider } from '@/providers/GameProvider';
 import { useAuth } from '@/providers/AuthProvider';
 import { Player } from '@backgammon/game-engine';
+import { useTranslation } from '@/lib/i18n';
 
 function TableContent() {
   const searchParams = useSearchParams();
   const { user } = useAuth();
   const tableId = searchParams.get('id') || undefined;
   const aiMode = searchParams.get('ai') === 'true';
-  const player2Name = aiMode ? 'Computer' : undefined;
+  const t = useTranslation();
+  const player2Name = aiMode ? t.table.computer : undefined;
 
   return (
     <GameProvider tableId={tableId} aiMode={aiMode}>
@@ -97,10 +99,10 @@ function TableContent() {
           {/* ── Bottom nav (desktop only) ─────────────────────── */}
           <div className="hidden border-t border-stone-800 px-4 py-2 md:flex items-center justify-between text-xs text-stone-500">
             <Link href="/lobby" className="hover:text-stone-300 transition-colors">
-              &larr; Back to Lobby
+              &larr; {t.lobby.backToLobby}
             </Link>
             <span className="text-stone-600">
-              {aiMode ? 'vs Computer' : `Table ${tableId ?? '—'}`}
+              {aiMode ? t.lobby.vsComputer : t.lobby.tableLabel.replace('{id}', tableId ?? '—')}
             </span>
           </div>
         </div>

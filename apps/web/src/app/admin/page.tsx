@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { useTranslation } from '@/lib/i18n';
 
 interface DashboardStats {
   totalUsers: number;
@@ -22,6 +23,7 @@ function StatCard({ label, value }: { label: string; value: string }) {
 }
 
 export default function AdminDashboard() {
+  const t = useTranslation();
   const { data, isLoading, isError } = useQuery({
     queryKey: ['admin', 'dashboard'],
     queryFn: () => api<DashboardStats>('/api/admin/dashboard'),
@@ -38,23 +40,23 @@ export default function AdminDashboard() {
   if (isError || !data) {
     return (
       <div className="text-center py-12">
-        <p className="text-stone-400">Failed to load dashboard data.</p>
+        <p className="text-stone-400">{t.admin.failedLoad}</p>
       </div>
     );
   }
 
   const cards = [
-    { label: 'Total Users', value: data.totalUsers.toLocaleString() },
-    { label: 'Online Users', value: String(data.onlineUsers) },
-    { label: 'Active Tables', value: String(data.activeTables) },
-    { label: 'Games Today', value: String(data.gamesToday) },
-    { label: 'New Users Today', value: String(data.newUsersToday) },
-    { label: 'Banned Users', value: String(data.bannedUsers) },
+    { label: t.admin.stats_totalUsers, value: data.totalUsers.toLocaleString() },
+    { label: t.admin.stats_onlineUsers, value: String(data.onlineUsers) },
+    { label: t.admin.stats_activeTables, value: String(data.activeTables) },
+    { label: t.admin.stats_gamesToday, value: String(data.gamesToday) },
+    { label: t.admin.stats_newUsersToday, value: String(data.newUsersToday) },
+    { label: t.admin.stats_bannedUsers, value: String(data.bannedUsers) },
   ];
 
   return (
     <div>
-      <h1 className="mb-6 text-xl font-bold text-stone-100">Dashboard</h1>
+      <h1 className="mb-6 text-xl font-bold text-stone-100">{t.admin.dashboardTitle}</h1>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((card) => (
           <StatCard key={card.label} label={card.label} value={card.value} />

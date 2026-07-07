@@ -4,8 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/providers/AuthProvider';
 import { ApiError } from '@/lib/api';
+import { useTranslation } from '@/lib/i18n';
 
 export default function Register() {
+  const t = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
@@ -19,12 +21,12 @@ export default function Register() {
     setError('');
 
     if (!email || !password || !username || !displayName) {
-      setError('All fields are required');
+      setError(t.auth.allFieldsRequired);
       return;
     }
 
     if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError(t.auth.passwordMinLength);
       return;
     }
 
@@ -33,9 +35,9 @@ export default function Register() {
       await register(email, password, username, displayName);
     } catch (err) {
       if (err instanceof ApiError) {
-        setError((err.body as { error?: string })?.error || 'Registration failed');
+        setError((err.body as { error?: string })?.error || t.auth.registrationFailed);
       } else {
-        setError('An unexpected error occurred');
+        setError(t.auth.unexpectedError);
       }
     } finally {
       setLoading(false);
@@ -46,8 +48,8 @@ export default function Register() {
     <div className="flex items-center justify-center px-4 py-20">
       <div className="w-full max-w-sm">
         <div className="page-card p-8">
-          <h1 className="text-2xl font-bold">Sign Up</h1>
-          <p className="mt-1 text-sm text-stone-400">Create a new account to get started.</p>
+          <h1 className="text-2xl font-bold">{t.auth.signUpHeading}</h1>
+          <p className="mt-1 text-sm text-stone-400">{t.auth.signUpSubtitle}</p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-4">
             {error && (
@@ -58,7 +60,7 @@ export default function Register() {
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-stone-300">
-                Email
+                {t.auth.email}
               </label>
               <input
                 id="email"
@@ -66,13 +68,13 @@ export default function Register() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-stone-700 bg-stone-900 px-4 py-2 text-sm text-stone-100 placeholder-stone-500 outline-none focus:border-amber-500"
-                placeholder="you@example.com"
+                placeholder={t.auth.emailPlaceholder}
               />
             </div>
 
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-stone-300">
-                Username
+                {t.auth.username}
               </label>
               <input
                 id="username"
@@ -80,13 +82,13 @@ export default function Register() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-stone-700 bg-stone-900 px-4 py-2 text-sm text-stone-100 placeholder-stone-500 outline-none focus:border-amber-500"
-                placeholder="yourusername"
+                placeholder={t.auth.usernamePlaceholder}
               />
             </div>
 
             <div>
               <label htmlFor="displayName" className="block text-sm font-medium text-stone-300">
-                Display Name
+                {t.auth.displayName}
               </label>
               <input
                 id="displayName"
@@ -94,13 +96,13 @@ export default function Register() {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-stone-700 bg-stone-900 px-4 py-2 text-sm text-stone-100 placeholder-stone-500 outline-none focus:border-amber-500"
-                placeholder="Your Name"
+                placeholder={t.auth.displayNamePlaceholder}
               />
             </div>
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-stone-300">
-                Password
+                {t.auth.password}
               </label>
               <input
                 id="password"
@@ -108,7 +110,7 @@ export default function Register() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-stone-700 bg-stone-900 px-4 py-2 text-sm text-stone-100 placeholder-stone-500 outline-none focus:border-amber-500"
-                placeholder="••••••••"
+                placeholder={t.auth.passwordPlaceholder}
               />
             </div>
 
@@ -117,14 +119,14 @@ export default function Register() {
               disabled={loading}
               className="w-full rounded-lg bg-amber-500 px-4 py-3 text-sm font-semibold text-stone-950 transition-colors hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {loading ? 'Creating account...' : 'Sign Up'}
+              {loading ? t.auth.creatingAccount : t.auth.signUpButton}
             </button>
           </form>
 
           <p className="mt-6 text-center text-sm text-stone-500">
-            Already have an account?{' '}
+            {t.auth.haveAccount}{' '}
             <Link href="/login" className="text-amber-500 hover:text-amber-400">
-              Sign In
+              {t.auth.signInLink}
             </Link>
           </p>
         </div>

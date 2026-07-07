@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslation } from '@/lib/i18n';
 import { useGame } from '@/providers/GameProvider';
 import { Player } from '@backgammon/game-engine';
 
@@ -8,24 +9,20 @@ interface PlayerPanelProps {
   playerName?: string;
 }
 
-const PLAYER_NAMES: Record<Player, string> = {
-  [Player.One]: 'Player 1',
-  [Player.Two]: 'Player 2',
-};
-
 const PLAYER_COLORS: Record<Player, string> = {
   [Player.One]: 'bg-amber-200 border-amber-400',
   [Player.Two]: 'bg-stone-700 border-stone-500',
 };
 
 export default function PlayerPanel({ player, playerName }: PlayerPanelProps) {
+  const t = useTranslation();
   const { gameState } = useGame();
   const idx = player === Player.One ? 0 : 1;
   const barCount = gameState.players[idx].checkersOnBar;
   const borneOff = gameState.players[idx].checkersBorneOff;
   const isActive = gameState.currentPlayer === player;
 
-  const displayName = playerName ?? PLAYER_NAMES[player];
+  const displayName = playerName ?? (player === Player.One ? t.table.player1 : t.table.player2);
 
   return (
     <div
@@ -43,20 +40,23 @@ export default function PlayerPanel({ player, playerName }: PlayerPanelProps) {
             className="text-[10px] text-amber-500 font-semibold uppercase tracking-wider"
             aria-live="polite"
           >
-            Your turn
+            {t.table.yourTurn}
           </p>
         )}
         {barCount > 0 && (
           <p
             className="text-[10px] text-red-400 font-semibold"
-            aria-label={`${barCount} checkers on bar`}
+            aria-label={`${barCount} checkers ${t.table.onBar}`}
           >
-            {barCount} on bar
+            {barCount} {t.table.onBar}
           </p>
         )}
         {borneOff > 0 && (
-          <p className="text-[10px] text-stone-500" aria-label={`${borneOff} checkers borne off`}>
-            {borneOff} borne off
+          <p
+            className="text-[10px] text-stone-500"
+            aria-label={`${borneOff} checkers ${t.table.borneOffSuffix}`}
+          >
+            {borneOff} {t.table.borneOffSuffix}
           </p>
         )}
       </div>

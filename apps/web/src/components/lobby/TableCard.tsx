@@ -1,4 +1,5 @@
 import Button from '../Button';
+import { useTranslation } from '@/lib/i18n';
 
 type TableStatus = 'open' | 'occupied' | 'playing' | 'finished' | 'closed';
 
@@ -14,14 +15,6 @@ interface TableCardProps {
   onLeave?: () => void;
   onCancel?: () => void;
 }
-
-const statusLabel: Record<TableStatus, string> = {
-  open: 'Open',
-  occupied: 'Occupied',
-  playing: 'Playing',
-  finished: 'Finished',
-  closed: 'Closed',
-};
 
 const statusColor: Record<TableStatus, string> = {
   open: 'text-emerald-400',
@@ -51,6 +44,14 @@ export default function TableCard({
   onLeave,
   onCancel,
 }: TableCardProps) {
+  const t = useTranslation();
+  const statusLabel: Record<TableStatus, string> = {
+    open: t.lobby.open,
+    occupied: t.lobby.occupied,
+    playing: t.lobby.playing,
+    finished: t.lobby.finished,
+    closed: t.lobby.closed,
+  };
   const canJoin = status === 'open' && !isJoined;
   const canLeave = isJoined && status !== 'closed' && status !== 'finished';
   const canCancel = status === 'open' && isJoined && playerCount === 1;
@@ -65,14 +66,14 @@ export default function TableCard({
             <p className="truncate text-sm font-semibold text-stone-100">{name}</p>
             {isRanked && (
               <span className="shrink-0 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-medium text-amber-400">
-                Ranked
+                {t.lobby.ranked}
               </span>
             )}
           </div>
           <div className="mt-1 flex items-center gap-3 text-xs">
             <span className={`font-medium ${statusColor[status]}`}>{statusLabel[status]}</span>
             <span className="text-stone-500">
-              {playerCount}/{maxPlayers} players
+              {playerCount}/{maxPlayers} {t.common.players}
             </span>
           </div>
         </div>
@@ -83,7 +84,7 @@ export default function TableCard({
             onClick={onCancel}
             disabled={isDisabled}
           >
-            Cancel
+            {t.lobby.cancelTable}
           </Button>
         ) : canJoin ? (
           <Button
@@ -92,7 +93,7 @@ export default function TableCard({
             onClick={onJoin}
             disabled={isDisabled}
           >
-            Join
+            {t.lobby.join}
           </Button>
         ) : canLeave ? (
           <Button
@@ -101,11 +102,11 @@ export default function TableCard({
             onClick={onLeave}
             disabled={isDisabled}
           >
-            Leave
+            {t.lobby.leave}
           </Button>
         ) : (
           <span className="ml-4 shrink-0 text-xs text-stone-600">
-            {status === 'playing' ? 'In progress' : statusLabel[status]}
+            {status === 'playing' ? t.common.inProgress : statusLabel[status]}
           </span>
         )}
       </div>

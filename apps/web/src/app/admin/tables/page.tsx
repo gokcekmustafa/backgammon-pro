@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAdminTables, useAdminTableAction } from '@/hooks/useAdmin';
 import Button from '@/components/Button';
+import { useTranslation } from '@/lib/i18n';
 
 function formatDuration(ms: number) {
   const sec = Math.floor(ms / 1000);
@@ -12,6 +13,7 @@ function formatDuration(ms: number) {
 }
 
 export default function AdminLiveTables() {
+  const t = useTranslation();
   const { data, isLoading, isError } = useAdminTables();
   const tableAction = useAdminTableAction();
   const [warningInputs, setWarningInputs] = useState<Record<string, string>>({});
@@ -48,75 +50,93 @@ export default function AdminLiveTables() {
   }
 
   if (isError) {
-    return <p className="py-8 text-center text-sm text-red-400">Failed to load tables.</p>;
+    return <p className="py-8 text-center text-sm text-red-400">{t.admin.failedTables}</p>;
   }
 
   return (
     <div>
-      <h1 className="mb-6 text-xl font-bold text-stone-100">Live Tables</h1>
+      <h1 className="mb-6 text-xl font-bold text-stone-100">{t.admin.liveTablesTitle}</h1>
 
       <div className="overflow-x-auto rounded-lg border border-stone-800">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-stone-800 bg-stone-900">
-              <th className="px-4 py-3 font-semibold text-stone-400">Table</th>
-              <th className="px-4 py-3 font-semibold text-stone-400">Room</th>
-              <th className="px-4 py-3 font-semibold text-stone-400">Status</th>
-              <th className="px-4 py-3 font-semibold text-stone-400">Locked</th>
-              <th className="px-4 py-3 font-semibold text-stone-400">Players</th>
-              <th className="px-4 py-3 font-semibold text-stone-400">Specs</th>
-              <th className="px-4 py-3 font-semibold text-stone-400">Duration</th>
-              <th className="px-4 py-3 font-semibold text-stone-400">Actions</th>
+              <th className="px-4 py-3 font-semibold text-stone-400">{t.admin.column_table}</th>
+              <th className="px-4 py-3 font-semibold text-stone-400">{t.admin.column_room}</th>
+              <th className="px-4 py-3 font-semibold text-stone-400">{t.admin.column_status}</th>
+              <th className="px-4 py-3 font-semibold text-stone-400">{t.admin.column_locked}</th>
+              <th className="px-4 py-3 font-semibold text-stone-400">{t.admin.column_player1}</th>
+              <th className="px-4 py-3 font-semibold text-stone-400">{t.admin.column_specs}</th>
+              <th className="px-4 py-3 font-semibold text-stone-400">{t.admin.column_duration}</th>
+              <th className="px-4 py-3 font-semibold text-stone-400">{t.admin.column_actions}</th>
             </tr>
           </thead>
           <tbody>
             {data?.tables.map((table) => (
-              <tr key={table.id} className="border-b border-stone-800 last:border-0 hover:bg-stone-900/50">
+              <tr
+                key={table.id}
+                className="border-b border-stone-800 last:border-0 hover:bg-stone-900/50"
+              >
                 <td className="px-4 py-3 font-medium text-stone-100">{table.name}</td>
                 <td className="px-4 py-3 text-xs text-stone-400">{table.roomId}</td>
                 <td className="px-4 py-3">
-                  <span className={`inline-block rounded px-2 py-0.5 text-xs ${
-                    table.status === 'playing' ? 'bg-green-900/30 text-green-400' :
-                    table.status === 'waiting' ? 'bg-blue-900/30 text-blue-400' :
-                    'bg-stone-800 text-stone-400'
-                  }`}>
+                  <span
+                    className={`inline-block rounded px-2 py-0.5 text-xs ${
+                      table.status === 'playing'
+                        ? 'bg-green-900/30 text-green-400'
+                        : table.status === 'waiting'
+                          ? 'bg-blue-900/30 text-blue-400'
+                          : 'bg-stone-800 text-stone-400'
+                    }`}
+                  >
                     {table.status}
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`inline-block rounded px-2 py-0.5 text-xs ${
-                    table.locked ? 'bg-red-900/30 text-red-400' : 'bg-green-900/30 text-green-400'
-                  }`}>
-                    {table.locked ? 'Yes' : 'No'}
+                  <span
+                    className={`inline-block rounded px-2 py-0.5 text-xs ${
+                      table.locked ? 'bg-red-900/30 text-red-400' : 'bg-green-900/30 text-green-400'
+                    }`}
+                  >
+                    {table.locked ? t.admin.locked_yes : t.admin.locked_no}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-stone-300">{table.playerCount}</td>
                 <td className="px-4 py-3 text-stone-300">{table.spectatorCount}</td>
-                <td className="px-4 py-3 text-xs text-stone-500">{formatDuration(table.duration)}</td>
+                <td className="px-4 py-3 text-xs text-stone-500">
+                  {formatDuration(table.duration)}
+                </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-col gap-1">
                     <div className="flex flex-wrap gap-1">
                       <Button
                         variant="ghost"
-                        onClick={() => tableAction.mutate({ tableId: table.id, action: table.locked ? 'unlock' : 'lock' })}
+                        onClick={() =>
+                          tableAction.mutate({
+                            tableId: table.id,
+                            action: table.locked ? 'unlock' : 'lock',
+                          })
+                        }
                         disabled={tableAction.isPending}
                       >
-                        {table.locked ? 'Unlock' : 'Lock'}
+                        {table.locked ? t.admin.unlock : t.admin.lock}
                       </Button>
                       <Button
                         variant="ghost"
                         onClick={() => tableAction.mutate({ tableId: table.id, action: 'close' })}
                         disabled={tableAction.isPending}
                       >
-                        Close
+                        {t.admin.close}
                       </Button>
                     </div>
                     <div className="flex gap-1">
                       <input
                         type="text"
-                        placeholder="conn ID"
+                        placeholder={t.admin.connId}
                         value={removeInputs[table.id] ?? ''}
-                        onChange={(e) => setRemoveInputs((prev) => ({ ...prev, [table.id]: e.target.value }))}
+                        onChange={(e) =>
+                          setRemoveInputs((prev) => ({ ...prev, [table.id]: e.target.value }))
+                        }
                         onKeyDown={(e) => e.key === 'Enter' && handleRemove(table.id)}
                         className="w-20 rounded border border-stone-700 bg-stone-800 px-1 py-0.5 text-xs text-stone-100 placeholder-stone-500 focus:border-amber-500 focus:outline-none"
                       />
@@ -125,15 +145,17 @@ export default function AdminLiveTables() {
                         onClick={() => handleRemove(table.id)}
                         disabled={tableAction.isPending}
                       >
-                        Remove
+                        {t.common.remove}
                       </Button>
                     </div>
                     <div className="flex gap-1">
                       <input
                         type="text"
-                        placeholder="Warning"
+                        placeholder={t.common.warning}
                         value={warningInputs[table.id] ?? ''}
-                        onChange={(e) => setWarningInputs((prev) => ({ ...prev, [table.id]: e.target.value }))}
+                        onChange={(e) =>
+                          setWarningInputs((prev) => ({ ...prev, [table.id]: e.target.value }))
+                        }
                         onKeyDown={(e) => e.key === 'Enter' && handleWarning(table.id)}
                         className="w-28 rounded border border-stone-700 bg-stone-800 px-1 py-0.5 text-xs text-stone-100 placeholder-stone-500 focus:border-amber-500 focus:outline-none"
                       />
@@ -142,15 +164,17 @@ export default function AdminLiveTables() {
                         onClick={() => handleWarning(table.id)}
                         disabled={tableAction.isPending}
                       >
-                        Warn
+                        {t.admin.warn}
                       </Button>
                     </div>
                     <div className="flex gap-1">
                       <input
                         type="text"
-                        placeholder="Broadcast"
+                        placeholder={t.admin.broadcast}
                         value={broadcastInputs[table.id] ?? ''}
-                        onChange={(e) => setBroadcastInputs((prev) => ({ ...prev, [table.id]: e.target.value }))}
+                        onChange={(e) =>
+                          setBroadcastInputs((prev) => ({ ...prev, [table.id]: e.target.value }))
+                        }
                         onKeyDown={(e) => e.key === 'Enter' && handleBroadcast(table.id)}
                         className="w-28 rounded border border-stone-700 bg-stone-800 px-1 py-0.5 text-xs text-stone-100 placeholder-stone-500 focus:border-amber-500 focus:outline-none"
                       />
@@ -159,7 +183,7 @@ export default function AdminLiveTables() {
                         onClick={() => handleBroadcast(table.id)}
                         disabled={tableAction.isPending}
                       >
-                        Broadcast
+                        {t.admin.broadcast}
                       </Button>
                     </div>
                   </div>
@@ -171,7 +195,7 @@ export default function AdminLiveTables() {
       </div>
 
       {data?.tables.length === 0 && (
-        <p className="py-8 text-center text-sm text-stone-500">No active tables.</p>
+        <p className="py-8 text-center text-sm text-stone-500">{t.admin.noActiveTables}</p>
       )}
     </div>
   );

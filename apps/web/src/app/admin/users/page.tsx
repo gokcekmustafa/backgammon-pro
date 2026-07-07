@@ -2,12 +2,20 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useAdminUsers, useToggleStatus, useToggleBan, useDeleteUser, useChangeRole } from '@/hooks/useAdmin';
+import {
+  useAdminUsers,
+  useToggleStatus,
+  useToggleBan,
+  useDeleteUser,
+  useChangeRole,
+} from '@/hooks/useAdmin';
 import Button from '@/components/Button';
+import { useTranslation } from '@/lib/i18n';
 
 const roles = ['SUPER_ADMIN', 'ADMIN', 'MODERATOR', 'USER'] as const;
 
 export default function AdminUsers() {
+  const t = useTranslation();
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
@@ -43,45 +51,62 @@ export default function AdminUsers() {
 
   function handleRoleChange(id: string, role: string) {
     setChangingRole({ id, role });
-    changeRole.mutate(
-      { id, role },
-      { onSettled: () => setChangingRole(null) },
-    );
+    changeRole.mutate({ id, role }, { onSettled: () => setChangingRole(null) });
   }
 
   const filters = [
     { label: 'Role', value: roleFilter, onChange: setRoleFilter, options: ['', ...roles] },
-    { label: 'Banned', value: bannedFilter, onChange: setBannedFilter, options: ['', 'true', 'false'] },
-    { label: 'Deleted', value: deletedFilter, onChange: setDeletedFilter, options: ['', 'true', 'false'] },
+    {
+      label: 'Banned',
+      value: bannedFilter,
+      onChange: setBannedFilter,
+      options: ['', 'true', 'false'],
+    },
+    {
+      label: 'Deleted',
+      value: deletedFilter,
+      onChange: setDeletedFilter,
+      options: ['', 'true', 'false'],
+    },
   ] as const;
 
   return (
     <div>
-      <h1 className="mb-6 text-xl font-bold text-stone-100">Users</h1>
+      <h1 className="mb-6 text-xl font-bold text-stone-100">{t.admin.usersTitle}</h1>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="flex gap-2">
           <input
             type="text"
-            placeholder="Search users..."
+            placeholder={t.admin.searchUsers}
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={handleKeyDown}
             className="rounded-lg border border-stone-700 bg-stone-900 px-3 py-2 text-sm text-stone-100 placeholder-stone-500 focus:border-amber-500 focus:outline-none"
           />
-          <Button variant="secondary" onClick={handleSearch}>Search</Button>
+          <Button variant="secondary" onClick={handleSearch}>
+            {t.admin.searchBtn}
+          </Button>
         </div>
 
         {filters.map((f) => (
           <select
             key={f.label}
             value={f.value}
-            onChange={(e) => { f.onChange(e.target.value); setOffset(0); }}
+            onChange={(e) => {
+              f.onChange(e.target.value);
+              setOffset(0);
+            }}
             className="rounded-lg border border-stone-700 bg-stone-900 px-3 py-2 text-sm text-stone-100 focus:border-amber-500 focus:outline-none"
           >
-            <option value="">{f.label}: All</option>
+            <option value="">
+              {f.label}
+              {t.admin.filterAll}
+            </option>
             {f.options.slice(1).map((o) => (
-              <option key={String(o)} value={String(o)}>{f.label}: {o}</option>
+              <option key={String(o)} value={String(o)}>
+                {f.label}: {o}
+              </option>
             ))}
           </select>
         ))}
@@ -93,9 +118,7 @@ export default function AdminUsers() {
         </div>
       )}
 
-      {isError && (
-        <p className="py-8 text-center text-sm text-red-400">Failed to load users.</p>
-      )}
+      {isError && <p className="py-8 text-center text-sm text-red-400">{t.admin.failedLoad}</p>}
 
       {data && (
         <>
@@ -103,18 +126,30 @@ export default function AdminUsers() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-stone-800 bg-stone-900">
-                  <th className="px-4 py-3 font-semibold text-stone-400">User</th>
-                  <th className="px-4 py-3 font-semibold text-stone-400">Role</th>
-                  <th className="px-4 py-3 font-semibold text-stone-400">Status</th>
-                  <th className="px-4 py-3 font-semibold text-stone-400">Joined</th>
-                  <th className="px-4 py-3 font-semibold text-stone-400">Actions</th>
+                  <th className="px-4 py-3 font-semibold text-stone-400">{t.admin.column_user}</th>
+                  <th className="px-4 py-3 font-semibold text-stone-400">{t.admin.column_role}</th>
+                  <th className="px-4 py-3 font-semibold text-stone-400">
+                    {t.admin.column_status}
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-stone-400">
+                    {t.admin.column_joined}
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-stone-400">
+                    {t.admin.column_actions}
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {data.users.map((user) => (
-                  <tr key={user.id} className="border-b border-stone-800 last:border-0 hover:bg-stone-900/50">
+                  <tr
+                    key={user.id}
+                    className="border-b border-stone-800 last:border-0 hover:bg-stone-900/50"
+                  >
                     <td className="px-4 py-3">
-                      <Link href={`/admin/users/${user.id}`} className="font-medium text-amber-500 hover:text-amber-400">
+                      <Link
+                        href={`/admin/users/${user.id}`}
+                        className="font-medium text-amber-500 hover:text-amber-400"
+                      >
                         {user.displayName}
                       </Link>
                       <p className="text-xs text-stone-500">{user.email}</p>
@@ -127,25 +162,31 @@ export default function AdminUsers() {
                         className="rounded border border-stone-700 bg-stone-800 px-2 py-1 text-xs text-stone-100 focus:border-amber-500 focus:outline-none disabled:opacity-50"
                       >
                         {roles.map((r) => (
-                          <option key={r} value={r}>{r}</option>
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
                         ))}
                       </select>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
-                        <span className={`inline-block rounded px-2 py-0.5 text-xs ${
-                          user.isActive ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'
-                        }`}>
-                          {user.isActive ? 'Active' : 'Disabled'}
+                        <span
+                          className={`inline-block rounded px-2 py-0.5 text-xs ${
+                            user.isActive
+                              ? 'bg-green-900/30 text-green-400'
+                              : 'bg-red-900/30 text-red-400'
+                          }`}
+                        >
+                          {user.isActive ? t.admin.status_active : t.admin.status_disabled}
                         </span>
                         {user.bannedAt && (
                           <span className="inline-block rounded bg-red-900/30 px-2 py-0.5 text-xs text-red-400">
-                            Banned
+                            {t.admin.status_banned}
                           </span>
                         )}
                         {user.deletedAt && (
                           <span className="inline-block rounded bg-stone-800 px-2 py-0.5 text-xs text-stone-400">
-                            Deleted
+                            {t.admin.status_deleted}
                           </span>
                         )}
                       </div>
@@ -157,21 +198,20 @@ export default function AdminUsers() {
                       <div className="flex flex-wrap gap-1">
                         <Button
                           variant="ghost"
-                          onClick={() => toggleStatus.mutate({ id: user.id, isActive: !user.isActive })}
+                          onClick={() =>
+                            toggleStatus.mutate({ id: user.id, isActive: !user.isActive })
+                          }
                         >
-                          {user.isActive ? 'Disable' : 'Enable'}
+                          {user.isActive ? t.admin.disable : t.admin.enable}
                         </Button>
                         <Button
                           variant="ghost"
                           onClick={() => toggleBan.mutate({ id: user.id, banned: !user.bannedAt })}
                         >
-                          {user.bannedAt ? 'Unban' : 'Ban'}
+                          {user.bannedAt ? t.admin.unban : t.admin.ban}
                         </Button>
-                        <Button
-                          variant="ghost"
-                          onClick={() => deleteUser.mutate(user.id)}
-                        >
-                          Delete
+                        <Button variant="ghost" onClick={() => deleteUser.mutate(user.id)}>
+                          {t.admin.delete}
                         </Button>
                       </div>
                     </td>
@@ -183,7 +223,8 @@ export default function AdminUsers() {
 
           <div className="mt-4 flex items-center justify-between text-sm text-stone-400">
             <span>
-              Showing {offset + 1}–{Math.min(offset + limit, data.total)} of {data.total}
+              {t.common.showing}
+              {offset + 1}–{Math.min(offset + limit, data.total)} of {data.total}
             </span>
             <div className="flex gap-2">
               <Button
@@ -191,14 +232,14 @@ export default function AdminUsers() {
                 disabled={offset === 0}
                 onClick={() => setOffset(Math.max(0, offset - limit))}
               >
-                Previous
+                {t.common.previous}
               </Button>
               <Button
                 variant="secondary"
                 disabled={offset + limit >= data.total}
                 onClick={() => setOffset(offset + limit)}
               >
-                Next
+                {t.common.next}
               </Button>
             </div>
           </div>
