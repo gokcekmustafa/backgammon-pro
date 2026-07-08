@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { useGame } from '@/providers/GameProvider';
 import { Player, playerToIndex } from '@backgammon/game-engine';
 import GameBoard from './GameBoard';

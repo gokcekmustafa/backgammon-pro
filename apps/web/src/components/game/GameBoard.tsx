@@ -5,27 +5,21 @@ import {
   createBoardGeometry,
   getCheckerPosition,
   computeCheckerDiameter,
+  getTrianglePoints,
+  trianglePointsToString,
 } from '@backgammon/board-renderer';
 import { Player, BAR_INDEX, BEAR_OFF_INDEX } from '@backgammon/game-engine';
 import type { GameState, Move } from '@backgammon/game-engine';
-import type { PointGeometry, BoardGeometry } from '@backgammon/board-renderer';
+import type { PointGeometry } from '@backgammon/board-renderer';
 
-const POINT_COLORS: [string, string] = ['#d4a76a', '#7a4e24'];
-const BOARD_FILL = '#1a5c2a';
-const BOARD_STROKE = '#3a2208';
-const BAR_FILL = '#1a5c2a';
-const P1_CHECKER_FILL = '#f0d9b5';
-const P1_CHECKER_STROKE = '#c4a882';
-const P2_CHECKER_FILL = '#5c3a1a';
-const P2_CHECKER_STROKE = '#3d2510';
+const POINT_COLORS: [string, string] = ['#e8c082', '#8b3a1a'];
+const BOARD_FILL = '#0d421e';
 const LEGAL_MOVE_FILL = 'rgba(255, 240, 200, 0.5)';
-const HIGHLIGHT_STROKE = '#fbbf24';
 const DRAG_TARGET_FILL = 'rgba(255, 240, 200, 0.25)';
 const MAX_VISIBLE_CHECKERS = 6;
 const MAX_VISIBLE_BAR_CHIPS = 8;
 const SOURCE_HIGHLIGHT_FILL = 'rgba(255, 224, 168, 0.08)';
 const SELECTED_SOURCE_FILL = 'rgba(255, 210, 112, 0.18)';
-const DESTINATION_PULSE_FILL = 'rgba(255, 223, 145, 0.3)';
 
 interface GameBoardProps {
   gameState: GameState;
@@ -38,12 +32,6 @@ interface GameBoardProps {
   localPlayer?: Player | null;
   onPointClick: (pointIndex: number) => void;
   onMakeMove: (from: number, to: number) => void;
-}
-
-function checkerColor(player: Player): { fill: string; stroke: string } {
-  return player === Player.One
-    ? { fill: P1_CHECKER_FILL, stroke: P1_CHECKER_STROKE }
-    : { fill: P2_CHECKER_FILL, stroke: P2_CHECKER_STROKE };
 }
 
 const STACK_SEPARATOR = 0.5;
@@ -508,12 +496,13 @@ export default function GameBoard({
     () =>
       visualPoints.map((pt) => {
         const color = pt.index % 2 === 0 ? POINT_COLORS[0] : POINT_COLORS[1];
+        const triPoints = getTrianglePoints(pt.rect, pt.direction);
         return (
           <polygon
             key={`tri-${pt.index}`}
-            points={`${pt.rect.x},${pt.rect.y} ${pt.rect.x + pt.rect.width},${pt.rect.y} ${pt.rect.x + pt.rect.width / 2},${pt.direction === 'down' ? pt.rect.y + pt.rect.height : pt.rect.y}`}
+            points={trianglePointsToString(triPoints)}
             fill={color}
-            fill-opacity={0.85}
+            fillOpacity={0.85}
           />
         );
       }),
@@ -527,13 +516,17 @@ export default function GameBoard({
       const pt = visualPoints[vi];
       if (!pt) return null;
       const isSelected = selectedPoint === src;
+      const triPts = getTrianglePoints(pt.rect, pt.direction);
       return (
         <polygon
           key={`highlight-${src}`}
-          points={`${pt.rect.x},${pt.rect.y} ${pt.rect.x + pt.rect.width},${pt.rect.y} ${pt.rect.x + pt.rect.width / 2},${pt.direction === 'down' ? pt.rect.y + pt.rect.height : pt.rect.y}`}
+          points={trianglePointsToString(triPts)}
           fill={isSelected ? SELECTED_SOURCE_FILL : SOURCE_HIGHLIGHT_FILL}
-          mix-blend-mode="screen"
-          style={{ pointerEvents: 'none', transition: 'opacity 0.12s ease' }}
+          style={{
+            pointerEvents: 'none',
+            mixBlendMode: 'screen',
+            transition: 'opacity 0.12s ease',
+          }}
         />
       );
     });
@@ -579,9 +572,17 @@ export default function GameBoard({
       const isSelected = selectedPoint === i;
       const showCount = Math.min(count, MAX_VISIBLE_CHECKERS);
 
+      const pointHeight = geo.rect.height;
+      const idealStackH = (showCount - 1) * (checkerDiam + checkerGap);
+      const maxStackH = pointHeight - checkerDiam * 0.5;
+      const effectiveGap =
+        idealStackH > maxStackH && showCount > 1
+          ? Math.max(0, (maxStackH - (showCount - 1) * checkerDiam) / (showCount - 1))
+          : checkerGap;
+
       for (let j = 0; j < showCount; j++) {
-        const pos = getCheckerPosition(geo.rect, geo.direction, j, checkerDiam, checkerGap);
-        const size = checkerDiam * 0.9;
+        const pos = getCheckerPosition(geo.rect, geo.direction, j, checkerDiam, effectiveGap);
+        const size = checkerDiam;
         const isLast = j === showCount - 1;
         const arrived = isLast && animatingPoint === i;
         const captured = isLast && capturePoint === i;
@@ -691,12 +692,19 @@ export default function GameBoard({
       const showCount = Math.min(count, MAX_VISIBLE_BAR_CHIPS);
       const stoneHref =
         player === Player.One ? '/assets/stone-light.png' : '/assets/stone-dark.png';
-      const size = checkerDiam * 0.65;
+      const barChipSize = checkerDiam * 0.72;
+
+      const barStackH = (showCount - 1) * (barChipSize + checkerGap);
+      const barMaxH = (isTop ? bh / 2 : bh / 2) - barChipSize * 1.2;
+      const barGap =
+        barStackH > barMaxH && showCount > 1
+          ? Math.max(0, (barMaxH - (showCount - 1) * barChipSize) / (showCount - 1))
+          : checkerGap;
 
       for (let i = 0; i < showCount; i++) {
         const cy = isTop
-          ? barTopY + i * (checkerDiam * 0.65 + checkerGap)
-          : barBotY - i * (checkerDiam * 0.65 + checkerGap);
+          ? barTopY + i * (barChipSize + barGap)
+          : barBotY - i * (barChipSize + barGap);
         const isBarDragSourceCheck =
           (player === Player.One && isBarDragSource && gameState.currentPlayer === Player.One) ||
           (player === Player.Two && isBarDragSource && gameState.currentPlayer === Player.Two);
@@ -707,10 +715,10 @@ export default function GameBoard({
         els.push(
           <image
             key={`bar-${player}-${i}`}
-            x={barCx - size / 2}
-            y={cy - size / 2}
-            width={size}
-            height={size}
+            x={barCx - barChipSize / 2}
+            y={cy - barChipSize / 2}
+            width={barChipSize}
+            height={barChipSize}
             href={stoneHref}
             className={isBarDragSourceCheck ? 'checker-selected' : 'checker-normal'}
             style={{
@@ -730,13 +738,13 @@ export default function GameBoard({
 
       if (count > MAX_VISIBLE_BAR_CHIPS) {
         const lastCy = isTop
-          ? barTopY + (showCount - 1) * (checkerDiam * 0.65 + checkerGap)
-          : barBotY - (showCount - 1) * (checkerDiam * 0.65 + checkerGap);
+          ? barTopY + (showCount - 1) * (barChipSize + barGap)
+          : barBotY - (showCount - 1) * (barChipSize + barGap);
         els.push(
           <text
             key={`bar-badge-${player}`}
             x={barCx}
-            y={lastCy + (isTop ? (checkerDiam * 0.65) / 2 + 10 : (-checkerDiam * 0.65) / 2 - 10)}
+            y={lastCy + (isTop ? barChipSize / 2 + 10 : -barChipSize / 2 - 10)}
             textAnchor="middle"
             dominantBaseline="central"
             fill="#d29a45"
@@ -918,7 +926,7 @@ export default function GameBoard({
       return null;
     }
 
-    const size = checkerDiam * 0.9;
+    const size = checkerDiam;
     return (
       <image
         href={stoneHref}
@@ -956,60 +964,113 @@ export default function GameBoard({
     >
       <defs>
         <linearGradient id="frame-base" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#a67b4a" />
-          <stop offset="40%" stopColor="#7a4e24" />
-          <stop offset="100%" stopColor="#4a2c10" />
+          <stop offset="0%" stopColor="#c4954a" />
+          <stop offset="25%" stopColor="#a67b3a" />
+          <stop offset="60%" stopColor="#6b3d12" />
+          <stop offset="100%" stopColor="#3a1f08" />
+        </linearGradient>
+
+        <linearGradient id="frame-bevel" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.12)" />
+          <stop offset="50%" stopColor="rgba(255,255,255,0.02)" />
+          <stop offset="100%" stopColor="rgba(0,0,0,0.18)" />
         </linearGradient>
 
         <filter id="felt-noise" x="0" y="0" width="100%" height="100%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves="3" result="n" />
+          <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="4" result="n" />
           <feColorMatrix type="saturate" values="0" in="n" result="gn" />
           <feComponentTransfer in="gn" result="soft">
-            <feFuncA type="linear" slope="0.05" />
+            <feFuncA type="linear" slope="0.06" />
           </feComponentTransfer>
           <feBlend mode="multiply" in="soft" in2="SourceGraphic" />
         </filter>
 
         <linearGradient id="lighting" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#fff" stopOpacity="0.06" />
-          <stop offset="50%" stopColor="#000" stopOpacity="0" />
-          <stop offset="100%" stopColor="#000" stopOpacity="0.14" />
+          <stop offset="0%" stopColor="#fff" stopOpacity="0.08" />
+          <stop offset="45%" stopColor="#fff" stopOpacity="0" />
+          <stop offset="55%" stopColor="#000" stopOpacity="0" />
+          <stop offset="100%" stopColor="#000" stopOpacity="0.18" />
         </linearGradient>
+
+        <linearGradient id="tri-light" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.15)" />
+          <stop offset="100%" stopColor="rgba(0,0,0,0.12)" />
+        </linearGradient>
+
+        <filter id="shadow-ambient">
+          <feDropShadow dx="0" dy="12" stdDeviation="20" floodColor="#000" floodOpacity="0.3" />
+          <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#000" floodOpacity="0.15" />
+        </filter>
       </defs>
 
-      {/* Wooden board frame (with ambient shadow directly on the frame) */}
+      {/* Ambient board shadow */}
+      <rect
+        x={-4}
+        y={-4}
+        width={bw + 8}
+        height={bh + 8}
+        rx={18}
+        fill="none"
+        filter="url(#shadow-ambient)"
+        style={{ pointerEvents: 'none' }}
+      />
+
+      {/* Outer wood frame */}
       <rect
         x="0"
         y="0"
         width={bw}
         height={bh}
-        rx="14"
+        rx="16"
         fill="url(#frame-base)"
-        stroke="#3a2208"
-        strokeWidth={2}
-        filter="drop-shadow(0 10px 32px rgba(0,0,0,0.35)) drop-shadow(0 3px 8px rgba(0,0,0,0.2))"
+        stroke="#1a0e04"
+        strokeWidth={2.5}
         shapeRendering="crispEdges"
+      />
+
+      {/* Frame bevel overlay */}
+      <rect
+        x="0"
+        y="0"
+        width={bw}
+        height={bh}
+        rx={16}
+        fill="url(#frame-bevel)"
+        style={{ pointerEvents: 'none' }}
+      />
+
+      {/* Inner frame border */}
+      <rect
+        x={4}
+        y={4}
+        width={bw - 8}
+        height={bh - 8}
+        rx={12}
+        fill="none"
+        stroke="#1a0e04"
+        strokeWidth={1}
+        style={{ pointerEvents: 'none' }}
       />
 
       {/* Inner bevel highlight */}
       <rect
-        x={3}
-        y={3}
-        width={bw - 6}
-        height={bh - 6}
-        rx={11}
+        x={5}
+        y={5}
+        width={bw - 10}
+        height={bh - 10}
+        rx={10}
         fill="none"
-        stroke="rgba(255,255,255,0.08)"
+        stroke="rgba(255,255,255,0.07)"
         strokeWidth={1}
         style={{ pointerEvents: 'none' }}
       />
 
       {/* Felt board surface */}
       <rect
-        x={8}
-        y={8}
-        width={bw - 16}
-        height={bh - 16}
+        x={10}
+        y={10}
+        width={bw - 20}
+        height={bh - 20}
         rx="6"
         fill={BOARD_FILL}
         filter="url(#felt-noise)"
@@ -1018,13 +1079,46 @@ export default function GameBoard({
 
       {/* Lighting gradient over the entire board surface */}
       <rect
-        x={8}
-        y={8}
-        width={bw - 16}
-        height={bh - 16}
+        x={10}
+        y={10}
+        width={bw - 20}
+        height={bh - 20}
         rx={6}
         fill="url(#lighting)"
         style={{ pointerEvents: 'none', mixBlendMode: 'overlay' as any }}
+      />
+
+      {/* Triangle gradient overlays for depth */}
+      {visualPoints.map((pt) => {
+        const triPts = getTrianglePoints(pt.rect, pt.direction);
+        return (
+          <polygon
+            key={`tri-light-${pt.index}`}
+            points={trianglePointsToString(triPts)}
+            fill="url(#tri-light)"
+            style={{ pointerEvents: 'none', mixBlendMode: 'multiply' }}
+          />
+        );
+      })}
+      {/* Bar background */}
+      <rect
+        x={geometry.bar.x}
+        y={10}
+        width={geometry.bar.width}
+        height={bh - 20}
+        rx={2}
+        fill="url(#frame-base)"
+        opacity={0.7}
+      />
+      <rect
+        x={geometry.bar.x}
+        y={10}
+        width={geometry.bar.width}
+        height={bh - 20}
+        rx={2}
+        fill="none"
+        stroke="#1a0e04"
+        strokeWidth={0.5}
       />
       {sourceHighlightElements}
       {pointClickAreas}

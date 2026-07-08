@@ -17,9 +17,9 @@ import {
 import { Player, GamePhase, TurnPhase } from '@backgammon/game-engine';
 import type { GameState, Move } from '@backgammon/game-engine';
 
-const BOARD_WIDTH = 600;
-const CHECKER_PADDING_RATIO = 0.75;
-const CHECKER_GAP = 2;
+const BOARD_WIDTH = 620;
+const CHECKER_PADDING_RATIO = 0.85;
+const CHECKER_GAP = 1;
 
 export interface UseGameEngineReturn {
   gameState: GameState;

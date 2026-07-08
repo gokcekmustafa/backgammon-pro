@@ -6,9 +6,9 @@ import type { GameState } from '@backgammon/game-engine';
 import { useWebSocket } from './useWebSocket';
 import type { UseGameEngineReturn } from './useGameEngine';
 
-const BOARD_WIDTH = 600;
-const CHECKER_PADDING_RATIO = 0.75;
-const CHECKER_GAP = 2;
+const BOARD_WIDTH = 620;
+const CHECKER_PADDING_RATIO = 0.85;
+const CHECKER_GAP = 1;
 
 export type ConnectionStatus = 'connected' | 'opponent_disconnected' | 'opponent_reconnected';
 
