@@ -28,26 +28,26 @@ describe('createBoardGeometry', () => {
     expect(geo.boardHeight).toBe(400);
   });
 
-  it('assigns all indices 0-23 with top half reversed', () => {
+  it('assigns all indices 0-23 with correct visual layout', () => {
     const geo = createBoardGeometry(800);
     const indices = geo.points.map((p) => p.index);
     indices.sort((a, b) => a - b);
     expect(indices).toEqual(Array.from({ length: 24 }, (_, i) => i));
-    // Top-left group (visual 0-5): indices 11 down to 6
+    // Top-left group (visual 0-5): indices 12, 13, 14, 15, 16, 17
     for (let i = 0; i < 6; i++) {
-      expect(geo.points[i].index).toBe(11 - i);
+      expect(geo.points[i].index).toBe(12 + i);
     }
-    // Top-right group (visual 6-11): indices 5 down to 0
+    // Top-right group (visual 6-11): indices 18, 19, 20, 21, 22, 23
     for (let i = 0; i < 6; i++) {
-      expect(geo.points[6 + i].index).toBe(5 - i);
+      expect(geo.points[6 + i].index).toBe(18 + i);
     }
-    // Bottom-left group (visual 12-17): indices 12 up to 17
+    // Bottom-left group (visual 12-17): indices 11, 10, 9, 8, 7, 6
     for (let i = 0; i < 6; i++) {
-      expect(geo.points[12 + i].index).toBe(12 + i);
+      expect(geo.points[12 + i].index).toBe(11 - i);
     }
-    // Bottom-right group (visual 18-23): indices 18 up to 23
+    // Bottom-right group (visual 18-23): indices 5, 4, 3, 2, 1, 0
     for (let i = 0; i < 6; i++) {
-      expect(geo.points[18 + i].index).toBe(18 + i);
+      expect(geo.points[18 + i].index).toBe(5 - i);
     }
   });
 
