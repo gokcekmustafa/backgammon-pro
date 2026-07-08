@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useCallback, useState, type ReactNode } from 'react';
+import { useMemo, useRef, useCallback, useState, useEffect, type ReactNode } from 'react';
 import {
   createBoardGeometry,
   getCheckerPosition,
@@ -8,19 +8,24 @@ import {
 } from '@backgammon/board-renderer';
 import { Player, BAR_INDEX, BEAR_OFF_INDEX } from '@backgammon/game-engine';
 import type { GameState, Move } from '@backgammon/game-engine';
-import type { PointGeometry } from '@backgammon/board-renderer';
+import type { PointGeometry, BoardGeometry } from '@backgammon/board-renderer';
 
-const POINT_COLORS: [string, string] = ['#f5deb3', '#8b4513'];
+const POINT_COLORS: [string, string] = ['#d4a76a', '#7a4e24'];
 const BOARD_FILL = '#1a5c2a';
-const BOARD_STROKE = '#5c3a1a';
+const BOARD_STROKE = '#3a2208';
 const BAR_FILL = '#1a5c2a';
 const P1_CHECKER_FILL = '#f0d9b5';
 const P1_CHECKER_STROKE = '#c4a882';
 const P2_CHECKER_FILL = '#5c3a1a';
 const P2_CHECKER_STROKE = '#3d2510';
-const LEGAL_MOVE_FILL = 'rgba(255, 255, 200, 0.6)';
+const LEGAL_MOVE_FILL = 'rgba(255, 240, 200, 0.5)';
 const HIGHLIGHT_STROKE = '#fbbf24';
-const DRAG_TARGET_FILL = 'rgba(255, 255, 200, 0.35)';
+const DRAG_TARGET_FILL = 'rgba(255, 240, 200, 0.25)';
+const MAX_VISIBLE_CHECKERS = 6;
+const MAX_VISIBLE_BAR_CHIPS = 8;
+const SOURCE_HIGHLIGHT_FILL = 'rgba(255, 224, 168, 0.08)';
+const SELECTED_SOURCE_FILL = 'rgba(255, 210, 112, 0.18)';
+const DESTINATION_PULSE_FILL = 'rgba(255, 223, 145, 0.3)';
 
 interface GameBoardProps {
   gameState: GameState;
@@ -30,6 +35,7 @@ interface GameBoardProps {
   boardWidth: number;
   checkerPaddingRatio: number;
   checkerGap: number;
+  localPlayer?: Player | null;
   onPointClick: (pointIndex: number) => void;
   onMakeMove: (from: number, to: number) => void;
 }
@@ -125,12 +131,19 @@ export default function GameBoard({
   boardWidth,
   checkerPaddingRatio,
   checkerGap,
+  localPlayer,
   onPointClick,
   onMakeMove,
 }: GameBoardProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const dragRef = useRef<DragState | null>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
+  const [ghostMove, setGhostMove] = useState<{ from: number; to: number; player: Player } | null>(
+    null,
+  );
+  const [animatingPoint, setAnimatingPoint] = useState<number | null>(null);
+  const [capturePoint, setCapturePoint] = useState<number | null>(null);
+  const prevBoardRef = useRef<string>('');
 
   const geometry = useMemo(() => createBoardGeometry(boardWidth), [boardWidth]);
   const checkerDiam = useMemo(
@@ -140,9 +153,50 @@ export default function GameBoard({
   const bw = geometry.boardWidth;
   const bh = geometry.boardHeight;
 
+  const isFlipped = localPlayer === Player.Two;
+
+  const visualPoints = useMemo(() => {
+    if (!isFlipped) return geometry.points;
+    return geometry.points.map((pt) => {
+      const flippedIndex = 23 - pt.index;
+      const origFlipped = geometry.points[flippedIndex];
+      return {
+        ...origFlipped,
+        rect: {
+          x: origFlipped.rect.x,
+          y: bh - origFlipped.rect.y - geometry.pointHeight,
+          width: origFlipped.rect.width,
+          height: origFlipped.rect.height,
+        },
+        direction: origFlipped.direction === 'up' ? ('down' as const) : ('up' as const),
+        isTopHalf: !origFlipped.isTopHalf,
+        index: pt.index,
+      };
+    });
+  }, [geometry, isFlipped, bh]);
+
+  const logicalToVisual = useCallback(
+    (logicalIdx: number): number => {
+      if (!isFlipped) return logicalIdx;
+      return 23 - logicalIdx;
+    },
+    [isFlipped],
+  );
+
+  const visualToLogical = useCallback(
+    (visualIdx: number): number => {
+      if (!isFlipped) return visualIdx;
+      return 23 - visualIdx;
+    },
+    [isFlipped],
+  );
+
   const legalDestinations = useMemo(() => new Set(legalMoves.map((m) => m.to)), [legalMoves]);
 
-  const points = geometry.points;
+  const selectableSources = useMemo(() => {
+    if (gameState.phase !== 'playing') return new Set<number>();
+    return new Set(allLegalMoves.map((m) => m.from));
+  }, [allLegalMoves, gameState]);
 
   const dragTargets = useMemo(() => {
     if (!drag?.isDragging) return new Set<number>();
@@ -169,13 +223,14 @@ export default function GameBoard({
     (from: number) => {
       const d = dragRef.current;
       if (!d) return;
-
+      const pts = isFlipped ? geometry.points : geometry.points;
       let targetCx: number;
       let targetCy: number;
 
       if (from >= 0 && from < 24) {
-        const sourceGeo = points[from];
-        const count = gameState.board[from]?.count ?? 1;
+        const logicalFrom = visualToLogical(from);
+        const sourceGeo = pts[logicalFrom];
+        const count = gameState.board[logicalFrom]?.count ?? 1;
         const pos = getCheckerPosition(
           sourceGeo.rect,
           sourceGeo.direction,
@@ -195,8 +250,12 @@ export default function GameBoard({
         targetCx = barCx;
         targetCy =
           gameState.currentPlayer === Player.One
-            ? barTopY + (barCount - 1) * (checkerDiam + checkerGap)
-            : barBotY - (barCount - 1) * (checkerDiam + checkerGap);
+            ? isFlipped
+              ? barBotY - (barCount - 1) * (checkerDiam + checkerGap)
+              : barTopY + (barCount - 1) * (checkerDiam + checkerGap)
+            : isFlipped
+              ? barTopY + (barCount - 1) * (checkerDiam + checkerGap)
+              : barBotY - (barCount - 1) * (checkerDiam + checkerGap);
       } else {
         setDrag(null);
         dragRef.current = null;
@@ -231,7 +290,7 @@ export default function GameBoard({
 
       requestAnimationFrame(animate);
     },
-    [points, gameState, checkerDiam, checkerGap, geometry, bh],
+    [geometry, gameState, checkerDiam, checkerGap, bh, isFlipped, visualToLogical],
   );
 
   const handlePointerDown = useCallback(
@@ -296,7 +355,7 @@ export default function GameBoard({
       if (d.isDragging) {
         const pt = svgCoord(e, svg);
         if (pt) {
-          const target = findDropTarget(pt.x, pt.y, d.from, allLegalMoves, points, bw, bh);
+          const target = findDropTarget(pt.x, pt.y, d.from, allLegalMoves, visualPoints, bw, bh);
           if (target !== null) {
             onMakeMove(d.from, target);
             setDrag(null);
@@ -317,7 +376,7 @@ export default function GameBoard({
         dragRef.current = null;
       }
     },
-    [allLegalMoves, onPointClick, onMakeMove, points, bw, bh, startReturnAnimation],
+    [allLegalMoves, onPointClick, onMakeMove, visualPoints, bw, bh, startReturnAnimation],
   );
 
   const handleLostPointerCapture = useCallback(() => {
@@ -327,37 +386,178 @@ export default function GameBoard({
     }
   }, []);
 
+  useEffect(() => {
+    const boardKey = JSON.stringify(gameState.board);
+    if (prevBoardRef.current && prevBoardRef.current !== boardKey) {
+      const prevBoard: { player: Player | null; count: number }[] = JSON.parse(
+        prevBoardRef.current,
+      );
+      let from = -1;
+      let to = -1;
+      for (let i = 0; i < 24; i++) {
+        const prev = prevBoard[i];
+        const curr = gameState.board[i];
+        if (prev.player !== curr.player || prev.count !== curr.count) {
+          if (curr.count > 0 && curr.player === gameState.currentPlayer) {
+            to = i;
+          } else {
+            from = i;
+          }
+        }
+      }
+      if (from >= 0 && to >= 0 && gameState.turn.phase !== 'waiting_for_roll') {
+        const hit = gameState.board[to]?.count === 1;
+        setGhostMove({ from, to, player: gameState.currentPlayer });
+        setTimeout(() => {
+          setAnimatingPoint(to);
+          if (hit) setCapturePoint(to);
+        }, 400);
+        setTimeout(() => {
+          setAnimatingPoint(null);
+          setCapturePoint(null);
+        }, 800);
+      }
+    }
+    prevBoardRef.current = boardKey;
+  }, [gameState.board, gameState.currentPlayer, gameState.turn.phase]);
+
+  const startGhostAnimation = useCallback(
+    (from: number, to: number, player: Player) => {
+      const svg = svgRef.current;
+      if (!svg) return;
+
+      const fromGeo = from === BAR_INDEX ? null : visualPoints[from];
+      const toGeo = to >= 0 && to < 24 ? visualPoints[to] : null;
+
+      let svgStartX: number, svgStartY: number;
+      if (from === BAR_INDEX) {
+        const barCx = geometry.bar.x + geometry.bar.width / 2;
+        const playerIdx = player === Player.One ? 0 : 1;
+        svgStartX = barCx;
+        svgStartY = isFlipped ? bh * 0.75 : bh * 0.25;
+      } else if (fromGeo) {
+        svgStartX = fromGeo.rect.x + fromGeo.rect.width / 2;
+        svgStartY =
+          fromGeo.rect.y +
+          (fromGeo.direction === 'down' ? checkerDiam / 4 : fromGeo.rect.height - checkerDiam / 4);
+      } else {
+        return;
+      }
+
+      let svgEndX: number, svgEndY: number;
+      if (to === BEAR_OFF_INDEX) {
+        svgEndX = isFlipped ? geometry.bar.x / 2 : bw - geometry.bar.x / 2;
+        svgEndY = bh / 2;
+      } else if (toGeo) {
+        svgEndX = toGeo.rect.x + toGeo.rect.width / 2;
+        svgEndY =
+          toGeo.rect.y +
+          (toGeo.direction === 'down' ? toGeo.rect.height - checkerDiam / 4 : checkerDiam / 4);
+      } else {
+        return;
+      }
+
+      const svgRect = svg.getBoundingClientRect();
+      const scaleX = svgRect.width / bw;
+      const scaleY = svgRect.height / bh;
+
+      const startX = svgRect.left + svgStartX * scaleX;
+      const startY = svgRect.top + svgStartY * scaleY;
+      const endX = svgRect.left + svgEndX * scaleX;
+      const endY = svgRect.top + svgEndY * scaleY;
+
+      const stoneFile = player === Player.One ? 'stone-light.png' : 'stone-dark.png';
+      const ghost = document.createElement('div');
+      ghost.className = 'checker-ghost';
+      ghost.style.cssText = [
+        'position:fixed',
+        `left:${startX - (checkerDiam * scaleX) / 2}px`,
+        `top:${startY - (checkerDiam * scaleY) / 2}px`,
+        `width:${checkerDiam * scaleX}px`,
+        `height:${checkerDiam * scaleY}px`,
+        'pointer-events:none',
+        'z-index:9999',
+        'transition:left 380ms cubic-bezier(.4,0,.2,1),top 380ms cubic-bezier(.4,0,.2,1),transform 380ms ease',
+        'transform:scale(1.15)',
+        'box-shadow:0 10px 30px rgba(0,0,0,0.55)',
+        'border-radius:50%',
+        `background:url(/assets/${stoneFile}) center/cover no-repeat`,
+      ].join(';');
+
+      document.body.appendChild(ghost);
+      ghost.getBoundingClientRect();
+      ghost.style.left = `${endX - (checkerDiam * scaleX) / 2}px`;
+      ghost.style.top = `${endY - (checkerDiam * scaleY) / 2}px`;
+      ghost.style.transform = 'scale(1)';
+
+      setTimeout(() => {
+        ghost.remove();
+        setGhostMove(null);
+      }, 420);
+    },
+    [visualPoints, geometry, gameState.players, checkerDiam, bw, bh, isFlipped],
+  );
+
+  useEffect(() => {
+    if (ghostMove) {
+      startGhostAnimation(ghostMove.from, ghostMove.to, ghostMove.player);
+    }
+  }, [ghostMove, startGhostAnimation]);
+
   const triangleElements = useMemo(
     () =>
-      points.map((pt) => {
+      visualPoints.map((pt) => {
         const color = pt.index % 2 === 0 ? POINT_COLORS[0] : POINT_COLORS[1];
         return (
           <polygon
             key={`tri-${pt.index}`}
             points={`${pt.rect.x},${pt.rect.y} ${pt.rect.x + pt.rect.width},${pt.rect.y} ${pt.rect.x + pt.rect.width / 2},${pt.direction === 'down' ? pt.rect.y + pt.rect.height : pt.rect.y}`}
             fill={color}
+            fill-opacity={0.85}
           />
         );
       }),
-    [points],
+    [visualPoints],
   );
+
+  const sourceHighlightElements = useMemo(() => {
+    if (gameState.phase !== 'playing' || selectableSources.size === 0) return null;
+    return Array.from(selectableSources).map((src) => {
+      const vi = logicalToVisual(src);
+      const pt = visualPoints[vi];
+      if (!pt) return null;
+      const isSelected = selectedPoint === src;
+      return (
+        <polygon
+          key={`highlight-${src}`}
+          points={`${pt.rect.x},${pt.rect.y} ${pt.rect.x + pt.rect.width},${pt.rect.y} ${pt.rect.x + pt.rect.width / 2},${pt.direction === 'down' ? pt.rect.y + pt.rect.height : pt.rect.y}`}
+          fill={isSelected ? SELECTED_SOURCE_FILL : SOURCE_HIGHLIGHT_FILL}
+          mix-blend-mode="screen"
+          style={{ pointerEvents: 'none', transition: 'opacity 0.12s ease' }}
+        />
+      );
+    });
+  }, [selectableSources, selectedPoint, visualPoints, gameState, logicalToVisual]);
 
   const pointClickAreas = useMemo(
     () =>
-      points.map((pt) => (
-        <rect
-          key={`click-${pt.index}`}
-          x={pt.rect.x}
-          y={pt.rect.y}
-          width={pt.rect.width}
-          height={pt.rect.height}
-          fill="transparent"
-          style={{ cursor: drag?.isDragging ? 'grabbing' : 'pointer' }}
-          onClick={() => onPointClick(pt.index)}
-          onPointerDown={(e) => handlePointerDown(pt.index, e)}
-        />
-      )),
-    [points, onPointClick, handlePointerDown, drag],
+      visualPoints.map((pt) => {
+        const logicalIdx = visualToLogical(pt.index);
+        return (
+          <rect
+            key={`click-${pt.index}`}
+            x={pt.rect.x}
+            y={pt.rect.y}
+            width={pt.rect.width}
+            height={pt.rect.height}
+            fill="transparent"
+            style={{ cursor: drag?.isDragging ? 'grabbing' : 'pointer' }}
+            onClick={() => onPointClick(logicalIdx)}
+            onPointerDown={(e) => handlePointerDown(logicalIdx, e)}
+          />
+        );
+      }),
+    [visualPoints, onPointClick, handlePointerDown, drag, visualToLogical],
   );
 
   const checkerElements = useMemo(() => {
@@ -374,32 +574,82 @@ export default function GameBoard({
       }
       if (count <= 0) continue;
 
-      const geo = points[i];
-      const colors = checkerColor(pt.player);
+      const vi = logicalToVisual(i);
+      const geo = visualPoints[vi];
       const isSelected = selectedPoint === i;
+      const showCount = Math.min(count, MAX_VISIBLE_CHECKERS);
 
-      for (let j = 0; j < count; j++) {
+      for (let j = 0; j < showCount; j++) {
         const pos = getCheckerPosition(geo.rect, geo.direction, j, checkerDiam, checkerGap);
+        const size = checkerDiam * 0.9;
+        const isLast = j === showCount - 1;
+        const arrived = isLast && animatingPoint === i;
+        const captured = isLast && capturePoint === i;
+
+        const gClasses = [arrived ? 'checker-arrived' : '', captured ? 'capture-flash' : '']
+          .filter(Boolean)
+          .join(' ');
+
+        const stackDepth = showCount > 1 ? j / (showCount - 1) : 1;
+        const shadowBlur = 1 + (1 - stackDepth) * 5;
+        const shadowOpacity = 0.1 + (1 - stackDepth) * 0.3;
+        const shadowOffset = 1 + (1 - stackDepth) * 3;
+
         els.push(
-          <circle
-            key={`c-${i}-${j}`}
-            cx={pos.cx}
-            cy={pos.cy}
-            r={pos.radius}
-            fill={colors.fill}
-            stroke={isSelected ? HIGHLIGHT_STROKE : colors.stroke}
-            strokeWidth={isSelected ? 2.5 : 1}
-            style={{
-              cursor: pt.player === gameState.currentPlayer ? 'grab' : 'default',
-              transition: 'cx 0.3s ease, cy 0.3s ease',
-            }}
-            onClick={() => {
-              if (pt.player === gameState.currentPlayer) {
-                onPointClick(i);
-              }
-            }}
-            onPointerDown={(e) => handlePointerDown(i, e)}
-          />,
+          <g key={`c-${i}-${j}`} className={gClasses}>
+            <image
+              x={pos.cx - size / 2}
+              y={pos.cy - size / 2}
+              width={size}
+              height={size}
+              href={pt.player === Player.One ? '/assets/stone-light.png' : '/assets/stone-dark.png'}
+              className={isSelected ? 'checker-selected' : 'checker-normal'}
+              style={{
+                cursor: pt.player === gameState.currentPlayer ? 'grab' : 'default',
+                transition: 'transform 0.14s ease, box-shadow 0.16s ease',
+                filter: isSelected
+                  ? `drop-shadow(0 0 3px rgba(251,191,36,0.45)) drop-shadow(0 ${shadowOffset}px ${shadowBlur}px rgba(0,0,0,${shadowOpacity}))`
+                  : `drop-shadow(0 ${shadowOffset}px ${shadowBlur}px rgba(0,0,0,${shadowOpacity}))`,
+              }}
+              onClick={() => {
+                if (pt.player === gameState.currentPlayer) {
+                  onPointClick(i);
+                }
+              }}
+              onPointerDown={(e) => handlePointerDown(i, e)}
+            />
+          </g>,
+        );
+      }
+
+      if (count > MAX_VISIBLE_CHECKERS) {
+        const lastPos = getCheckerPosition(
+          geo.rect,
+          geo.direction,
+          showCount - 1,
+          checkerDiam,
+          checkerGap,
+        );
+        const badgeSize = Math.max(checkerDiam * 0.35, 14);
+        els.push(
+          <text
+            key={`badge-${i}`}
+            x={geo.rect.x + geo.rect.width / 2}
+            y={
+              lastPos.cy +
+              (geo.direction === 'down'
+                ? checkerDiam / 2 + badgeSize / 2
+                : -checkerDiam / 2 - badgeSize / 2)
+            }
+            textAnchor="middle"
+            dominantBaseline="central"
+            fill="#d29a45"
+            fontSize={`${badgeSize * 0.7}px`}
+            fontWeight="700"
+            style={{ pointerEvents: 'none' }}
+          >
+            +{count - MAX_VISIBLE_CHECKERS}
+          </text>,
         );
       }
     }
@@ -407,12 +657,15 @@ export default function GameBoard({
   }, [
     gameState,
     selectedPoint,
-    points,
+    visualPoints,
     checkerDiam,
     checkerGap,
     drag,
     onPointClick,
     handlePointerDown,
+    logicalToVisual,
+    animatingPoint,
+    capturePoint,
   ]);
 
   const barPlayerOne = gameState.players[0].checkersOnBar;
@@ -434,48 +687,77 @@ export default function GameBoard({
       displayP2 = Math.max(0, displayP2 - 1);
     }
 
-    for (let i = 0; i < displayP1; i++) {
-      els.push(
-        <circle
-          key={`bar-p1-${i}`}
-          cx={barCx}
-          cy={barTopY + i * (checkerDiam + checkerGap)}
-          r={checkerDiam / 2}
-          fill={P1_CHECKER_FILL}
-          stroke={P1_CHECKER_STROKE}
-          strokeWidth={1}
-          style={{
-            transition: 'cy 0.3s ease',
-            cursor: gameState.currentPlayer === Player.One ? 'grab' : 'default',
-          }}
-          onClick={() => {
-            if (gameState.currentPlayer === Player.One) onPointClick(BAR_INDEX);
-          }}
-          onPointerDown={(e) => handlePointerDown(BAR_INDEX, e)}
-        />,
-      );
+    const renderBarChips = (player: Player.One | Player.Two, count: number, isTop: boolean) => {
+      const showCount = Math.min(count, MAX_VISIBLE_BAR_CHIPS);
+      const stoneHref =
+        player === Player.One ? '/assets/stone-light.png' : '/assets/stone-dark.png';
+      const size = checkerDiam * 0.65;
+
+      for (let i = 0; i < showCount; i++) {
+        const cy = isTop
+          ? barTopY + i * (checkerDiam * 0.65 + checkerGap)
+          : barBotY - i * (checkerDiam * 0.65 + checkerGap);
+        const isBarDragSourceCheck =
+          (player === Player.One && isBarDragSource && gameState.currentPlayer === Player.One) ||
+          (player === Player.Two && isBarDragSource && gameState.currentPlayer === Player.Two);
+        const stackDepth = showCount > 1 ? i / (showCount - 1) : 1;
+        const shadowBlur = 1 + (1 - stackDepth) * 4;
+        const shadowOpacity = 0.08 + (1 - stackDepth) * 0.22;
+        const shadowOffset = 1 + (1 - stackDepth) * 2;
+        els.push(
+          <image
+            key={`bar-${player}-${i}`}
+            x={barCx - size / 2}
+            y={cy - size / 2}
+            width={size}
+            height={size}
+            href={stoneHref}
+            className={isBarDragSourceCheck ? 'checker-selected' : 'checker-normal'}
+            style={{
+              cursor: gameState.currentPlayer === player ? 'grab' : 'default',
+              transition: 'transform 0.14s ease',
+              filter: isBarDragSourceCheck
+                ? `drop-shadow(0 0 3px rgba(251,191,36,0.45)) drop-shadow(0 ${shadowOffset}px ${shadowBlur}px rgba(0,0,0,${shadowOpacity}))`
+                : `drop-shadow(0 ${shadowOffset}px ${shadowBlur}px rgba(0,0,0,${shadowOpacity}))`,
+            }}
+            onClick={() => {
+              if (gameState.currentPlayer === player) onPointClick(BAR_INDEX);
+            }}
+            onPointerDown={(e) => handlePointerDown(BAR_INDEX, e)}
+          />,
+        );
+      }
+
+      if (count > MAX_VISIBLE_BAR_CHIPS) {
+        const lastCy = isTop
+          ? barTopY + (showCount - 1) * (checkerDiam * 0.65 + checkerGap)
+          : barBotY - (showCount - 1) * (checkerDiam * 0.65 + checkerGap);
+        els.push(
+          <text
+            key={`bar-badge-${player}`}
+            x={barCx}
+            y={lastCy + (isTop ? (checkerDiam * 0.65) / 2 + 10 : (-checkerDiam * 0.65) / 2 - 10)}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fill="#d29a45"
+            fontSize="11px"
+            fontWeight="700"
+            style={{ pointerEvents: 'none' }}
+          >
+            +{count - MAX_VISIBLE_BAR_CHIPS}
+          </text>,
+        );
+      }
+    };
+
+    if (isFlipped) {
+      renderBarChips(Player.Two, displayP2, true);
+      renderBarChips(Player.One, displayP1, false);
+    } else {
+      renderBarChips(Player.One, displayP1, true);
+      renderBarChips(Player.Two, displayP2, false);
     }
-    for (let i = 0; i < displayP2; i++) {
-      els.push(
-        <circle
-          key={`bar-p2-${i}`}
-          cx={barCx}
-          cy={barBotY - i * (checkerDiam + checkerGap)}
-          r={checkerDiam / 2}
-          fill={P2_CHECKER_FILL}
-          stroke={P2_CHECKER_STROKE}
-          strokeWidth={1}
-          style={{
-            transition: 'cy 0.3s ease',
-            cursor: gameState.currentPlayer === Player.Two ? 'grab' : 'default',
-          }}
-          onClick={() => {
-            if (gameState.currentPlayer === Player.Two) onPointClick(BAR_INDEX);
-          }}
-          onPointerDown={(e) => handlePointerDown(BAR_INDEX, e)}
-        />,
-      );
-    }
+
     return els;
   }, [
     barPlayerOne,
@@ -488,13 +770,15 @@ export default function GameBoard({
     gameState,
     onPointClick,
     handlePointerDown,
+    isFlipped,
   ]);
 
   const legalMoveIndicators = useMemo(() => {
     if (legalDestinations.size === 0) return null;
     return Array.from(legalDestinations).map((destIdx) => {
       if (destIdx < 0 || destIdx >= 24) return null;
-      const geo = points[destIdx];
+      const vi = logicalToVisual(destIdx);
+      const geo = visualPoints[vi];
       const pos = getCheckerPosition(
         geo.rect,
         geo.direction,
@@ -509,19 +793,98 @@ export default function GameBoard({
           cy={pos.cy}
           r={Math.max(checkerDiam * 0.2, 6)}
           fill={LEGAL_MOVE_FILL}
+          className="legal-move-dot"
           style={{ cursor: 'pointer' }}
           onClick={() => onPointClick(destIdx)}
           onPointerDown={(e) => e.stopPropagation()}
         />
       );
     });
-  }, [legalDestinations, points, checkerDiam, onPointClick]);
+  }, [legalDestinations, visualPoints, checkerDiam, onPointClick, logicalToVisual]);
+
+  const guideLines = useMemo(() => {
+    if (!selectedPoint && (!drag?.isDragging || !dragTargets.size)) return null;
+    const sourceIdx = drag?.isDragging ? drag.from : selectedPoint;
+    if (sourceIdx === null) return null;
+
+    const targets = new Set<number>();
+    if (drag?.isDragging) {
+      dragTargets.forEach((t) => {
+        if (t >= 0 && t < 24) targets.add(t);
+      });
+    } else {
+      legalDestinations.forEach((t) => {
+        if (t >= 0 && t < 24) targets.add(t);
+      });
+    }
+
+    if (targets.size === 0) return null;
+
+    let sourceCx: number, sourceCy: number;
+    if (sourceIdx === BAR_INDEX) {
+      sourceCx = geometry.bar.x + geometry.bar.width / 2;
+      sourceCy = isFlipped ? bh * 0.75 : bh * 0.25;
+    } else {
+      const vi = logicalToVisual(sourceIdx);
+      const srcGeo = visualPoints[vi];
+      sourceCx = srcGeo.rect.x + srcGeo.rect.width / 2;
+      sourceCy =
+        srcGeo.rect.y +
+        (srcGeo.direction === 'down' ? srcGeo.rect.height * 0.3 : srcGeo.rect.height * 0.7);
+    }
+
+    const paths: JSX.Element[] = [];
+    targets.forEach((target) => {
+      const vi = logicalToVisual(target);
+      const tgtGeo = visualPoints[vi];
+      const tgtCx = tgtGeo.rect.x + tgtGeo.rect.width / 2;
+      const tgtCy =
+        tgtGeo.rect.y +
+        (tgtGeo.direction === 'down' ? tgtGeo.rect.height * 0.7 : tgtGeo.rect.height * 0.3);
+
+      const midX = (sourceCx + tgtCx) / 2;
+      const bend = Math.max(
+        15,
+        Math.abs(tgtCx - sourceCx) * 0.13 + Math.abs(tgtCy - sourceCy) * 0.1,
+      );
+      const direction = tgtCy >= sourceCy ? -1 : 1;
+      const ctrlY = (sourceCy + tgtCy) / 2 + direction * bend;
+      const d = `M ${sourceCx.toFixed(1)} ${sourceCy.toFixed(1)} Q ${midX.toFixed(1)} ${ctrlY.toFixed(1)} ${tgtCx.toFixed(1)} ${tgtCy.toFixed(1)}`;
+
+      paths.push(
+        <path
+          key={`guide-${sourceIdx}-${target}`}
+          d={d}
+          fill="none"
+          stroke="rgba(255, 224, 163, 0.7)"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeDasharray="6 7"
+          className="guide-path"
+        />,
+      );
+    });
+
+    return <g style={{ pointerEvents: 'none' }}>{paths}</g>;
+  }, [
+    selectedPoint,
+    drag,
+    dragTargets,
+    legalDestinations,
+    visualPoints,
+    geometry,
+    bw,
+    bh,
+    logicalToVisual,
+    isFlipped,
+  ]);
 
   const dragTargetHighlights = useMemo((): ReactNode | null => {
     if (!drag?.isDragging || dragTargets.size === 0) return null;
     return Array.from(dragTargets).map((destIdx) => {
       if (destIdx < 0 || destIdx >= 24) return null;
-      const pt = points[destIdx];
+      const vi = logicalToVisual(destIdx);
+      const pt = visualPoints[vi];
       return (
         <rect
           key={`drag-target-${destIdx}`}
@@ -534,32 +897,35 @@ export default function GameBoard({
         />
       );
     });
-  }, [drag, dragTargets, points]);
+  }, [drag, dragTargets, visualPoints, logicalToVisual]);
 
   const dragOverlay = useMemo((): ReactNode | null => {
     if (!drag) return null;
 
     const from = drag.from;
-    let colors: { fill: string; stroke: string };
+    let stoneHref: string;
 
     if (from >= 0 && from < 24) {
       const pt = gameState.board[from];
       if (!pt.player) return null;
-      colors = checkerColor(pt.player);
+      stoneHref = pt.player === Player.One ? '/assets/stone-light.png' : '/assets/stone-dark.png';
     } else if (from === BAR_INDEX) {
-      colors = checkerColor(gameState.currentPlayer);
+      stoneHref =
+        gameState.currentPlayer === Player.One
+          ? '/assets/stone-light.png'
+          : '/assets/stone-dark.png';
     } else {
       return null;
     }
 
+    const size = checkerDiam * 0.9;
     return (
-      <circle
-        cx={drag.currentX}
-        cy={drag.currentY}
-        r={checkerDiam / 2}
-        fill={colors.fill}
-        stroke={HIGHLIGHT_STROKE}
-        strokeWidth={2.5}
+      <image
+        href={stoneHref}
+        x={drag.currentX - size / 2}
+        y={drag.currentY - size / 2}
+        width={size}
+        height={size}
         style={{
           pointerEvents: 'none',
           filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))',
@@ -589,46 +955,83 @@ export default function GameBoard({
       onLostPointerCapture={handleLostPointerCapture}
     >
       <defs>
-        <linearGradient id="board-bg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#1f6b32" />
-          <stop offset="50%" stop-color="#1a5c2a" />
-          <stop offset="100%" stop-color="#154d23" />
+        <linearGradient id="frame-base" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#a67b4a" />
+          <stop offset="40%" stopColor="#7a4e24" />
+          <stop offset="100%" stopColor="#4a2c10" />
+        </linearGradient>
+
+        <filter id="felt-noise" x="0" y="0" width="100%" height="100%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves="3" result="n" />
+          <feColorMatrix type="saturate" values="0" in="n" result="gn" />
+          <feComponentTransfer in="gn" result="soft">
+            <feFuncA type="linear" slope="0.05" />
+          </feComponentTransfer>
+          <feBlend mode="multiply" in="soft" in2="SourceGraphic" />
+        </filter>
+
+        <linearGradient id="lighting" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#fff" stopOpacity="0.06" />
+          <stop offset="50%" stopColor="#000" stopOpacity="0" />
+          <stop offset="100%" stopColor="#000" stopOpacity="0.14" />
         </linearGradient>
       </defs>
+
+      {/* Wooden board frame (with ambient shadow directly on the frame) */}
       <rect
-        x={0}
-        y={0}
+        x="0"
+        y="0"
         width={bw}
         height={bh}
-        rx={12}
-        fill="url(#board-bg)"
-        stroke={BOARD_STROKE}
-        strokeWidth={4}
-      />
-      <line
-        x1={0}
-        y1={bh / 2}
-        x2={bw}
-        y2={bh / 2}
-        stroke="#000"
+        rx="14"
+        fill="url(#frame-base)"
+        stroke="#3a2208"
         strokeWidth={2}
-        strokeOpacity={0.3}
+        filter="drop-shadow(0 10px 32px rgba(0,0,0,0.35)) drop-shadow(0 3px 8px rgba(0,0,0,0.2))"
+        shapeRendering="crispEdges"
       />
-      <line
-        x1={0}
-        y1={bh / 2}
-        x2={bw}
-        y2={bh / 2}
-        stroke="#fff"
+
+      {/* Inner bevel highlight */}
+      <rect
+        x={3}
+        y={3}
+        width={bw - 6}
+        height={bh - 6}
+        rx={11}
+        fill="none"
+        stroke="rgba(255,255,255,0.08)"
         strokeWidth={1}
-        strokeOpacity={0.15}
+        style={{ pointerEvents: 'none' }}
+      />
+
+      {/* Felt board surface */}
+      <rect
+        x={8}
+        y={8}
+        width={bw - 16}
+        height={bh - 16}
+        rx="6"
+        fill={BOARD_FILL}
+        filter="url(#felt-noise)"
       />
       {triangleElements}
-      <rect x={geometry.bar.x} y={0} width={geometry.bar.width} height={bh} fill={BAR_FILL} />
+
+      {/* Lighting gradient over the entire board surface */}
+      <rect
+        x={8}
+        y={8}
+        width={bw - 16}
+        height={bh - 16}
+        rx={6}
+        fill="url(#lighting)"
+        style={{ pointerEvents: 'none', mixBlendMode: 'overlay' as any }}
+      />
+      {sourceHighlightElements}
       {pointClickAreas}
       {checkerElements}
       {barElements}
       {legalMoveIndicators}
+      {guideLines}
       {dragTargetHighlights}
       {dragOverlay}
     </svg>

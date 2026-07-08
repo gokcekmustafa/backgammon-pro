@@ -3,6 +3,7 @@ export interface AuthUser {
   type: 'user' | 'guest';
   displayName: string;
   username?: string;
+  avatar?: string;
 }
 
 interface StoredAuth {
@@ -41,6 +42,11 @@ export function setStoredAuth(auth: StoredAuth): void {
   localStorage.setItem(ACCESS_KEY, auth.accessToken);
   localStorage.setItem(REFRESH_KEY, auth.refreshToken);
   localStorage.setItem(USER_KEY, JSON.stringify(auth.user));
+}
+
+export function setStoredUser(user: AuthUser): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
 export function clearStoredAuth(): void {

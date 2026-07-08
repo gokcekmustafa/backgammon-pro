@@ -117,3 +117,61 @@
   @apply text-amber-500 hover:text-amber-400 transition-colors;
   text-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
 }
+
+.checker-normal {
+  transition: transform 0.14s ease, box-shadow 0.16s ease, filter 0.14s ease;
+}
+
+.checker-normal:hover {
+  transform: scale(1.08);
+  filter: saturate(1.04) brightness(1.03) drop-shadow(0 2px 6px rgba(0,0,0,0.22)) !important;
+}
+
+.checker-selected {
+  transform: scale(1.06);
+  filter: drop-shadow(0 0 3px #fbbf24) drop-shadow(0 2px 6px rgba(0,0,0,0.22)) !important;
+}
+
+.legal-move-dot {
+  animation: legal-dot-pulse 1.05s ease-in-out infinite;
+}
+
+@keyframes legal-dot-pulse {
+  0%, 100% { filter: drop-shadow(0 0 2px rgba(255, 255, 200, 0.3)); }
+  50% { filter: drop-shadow(0 0 5px rgba(255, 255, 200, 0.6)); }
+}
+
+.guide-path {
+  animation: guide-flow 1.05s linear infinite;
+}
+
+@keyframes guide-flow {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -13; }
+}
+
+.checker-ghost {
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.checker-arrived {
+  animation: checker-arrived-bounce 260ms ease-out;
+}
+
+@keyframes checker-arrived-bounce {
+  0% { transform: scale(1.08); opacity: 0.7; }
+  60% { transform: scale(0.96); opacity: 0.95; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.capture-flash {
+  animation: capture-flash-anim 520ms ease-out;
+}
+
+@keyframes capture-flash-anim {
+  0%, 100% { filter: brightness(1) drop-shadow(0 0 0 transparent); }
+  25% { filter: brightness(1.5) drop-shadow(0 0 16px rgba(255,200,80,0.7)); }
+  60% { filter: brightness(1.15) drop-shadow(0 0 6px rgba(255,200,80,0.3)); }
+}
