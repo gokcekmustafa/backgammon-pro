@@ -143,9 +143,9 @@ export default function GameBoard({
 
   const visualPoints = useMemo(() => {
     if (!isFlipped) return geometry.points;
-    return geometry.points.map((pt) => {
-      const flippedIndex = 23 - pt.index;
-      const origFlipped = geometry.points[flippedIndex];
+    return geometry.points.map((_pt, vi) => {
+      const mirroredVi = 23 - vi;
+      const origFlipped = geometry.points[mirroredVi];
       return {
         ...origFlipped,
         rect: {
@@ -156,23 +156,23 @@ export default function GameBoard({
         },
         direction: origFlipped.direction === 'up' ? ('down' as const) : ('up' as const),
         isTopHalf: !origFlipped.isTopHalf,
-        index: pt.index,
+        index: origFlipped.index,
       };
     });
   }, [geometry, isFlipped, bh]);
 
   const logicalToVisual = useCallback(
     (logicalIdx: number): number => {
-      if (!isFlipped) return logicalIdx;
-      return 23 - logicalIdx;
+      const nf = logicalIdx < 12 ? 11 - logicalIdx : logicalIdx;
+      return isFlipped ? 23 - nf : nf;
     },
     [isFlipped],
   );
 
   const visualToLogical = useCallback(
     (visualIdx: number): number => {
-      if (!isFlipped) return visualIdx;
-      return 23 - visualIdx;
+      const uf = isFlipped ? 23 - visualIdx : visualIdx;
+      return uf < 12 ? 11 - uf : uf;
     },
     [isFlipped],
   );
@@ -214,9 +214,9 @@ export default function GameBoard({
       let targetCy: number;
 
       if (from >= 0 && from < 24) {
-        const logicalFrom = visualToLogical(from);
-        const sourceGeo = pts[logicalFrom];
-        const count = gameState.board[logicalFrom]?.count ?? 1;
+        const visualFrom = logicalToVisual(from);
+        const sourceGeo = pts[visualFrom];
+        const count = gameState.board[from]?.count ?? 1;
         const pos = getCheckerPosition(
           sourceGeo.rect,
           sourceGeo.direction,
@@ -533,7 +533,6 @@ export default function GameBoard({
   const pointClickAreas = useMemo(
     () =>
       visualPoints.map((pt) => {
-        const logicalIdx = visualToLogical(pt.index);
         return (
           <rect
             key={`click-${pt.index}`}
@@ -543,12 +542,12 @@ export default function GameBoard({
             height={pt.rect.height}
             fill="transparent"
             style={{ cursor: drag?.isDragging ? 'grabbing' : 'pointer' }}
-            onClick={() => onPointClick(logicalIdx)}
-            onPointerDown={(e) => handlePointerDown(logicalIdx, e)}
+            onClick={() => onPointClick(pt.index)}
+            onPointerDown={(e) => handlePointerDown(pt.index, e)}
           />
         );
       }),
-    [visualPoints, onPointClick, handlePointerDown, drag, visualToLogical],
+    [visualPoints, onPointClick, handlePointerDown, drag],
   );
 
   const checkerElements = useMemo(() => {

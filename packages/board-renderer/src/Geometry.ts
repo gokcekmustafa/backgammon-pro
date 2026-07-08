@@ -27,7 +27,7 @@ export function createBoardGeometry(boardWidth: number, boardHeight?: number): B
 
   for (let i = 0; i < POINTS_PER_HALF; i++) {
     points.push({
-      index: i,
+      index: POINTS_PER_HALF * 2 - 1 - i,
       rect: rect(i * pointWidth, 0, pointWidth, halfHeight),
       direction: 'down',
       isTopHalf: true,
@@ -36,7 +36,7 @@ export function createBoardGeometry(boardWidth: number, boardHeight?: number): B
 
   for (let i = 0; i < POINTS_PER_HALF; i++) {
     points.push({
-      index: POINTS_PER_HALF + i,
+      index: POINTS_PER_HALF - 1 - i,
       rect: rect(rightTableX + i * pointWidth, 0, pointWidth, halfHeight),
       direction: 'down',
       isTopHalf: true,
