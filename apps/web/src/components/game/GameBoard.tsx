@@ -163,7 +163,7 @@ export default function GameBoard({
 
   const logicalToVisual = useCallback(
     (logicalIdx: number): number => {
-      const nf = logicalIdx < 12 ? 11 - logicalIdx : logicalIdx;
+      const nf = logicalIdx >= 12 ? logicalIdx - 12 : 23 - logicalIdx;
       return isFlipped ? 23 - nf : nf;
     },
     [isFlipped],
@@ -172,7 +172,7 @@ export default function GameBoard({
   const visualToLogical = useCallback(
     (visualIdx: number): number => {
       const uf = isFlipped ? 23 - visualIdx : visualIdx;
-      return uf < 12 ? 11 - uf : uf;
+      return uf < 12 ? uf + 12 : 23 - uf;
     },
     [isFlipped],
   );
@@ -412,8 +412,8 @@ export default function GameBoard({
       const svg = svgRef.current;
       if (!svg) return;
 
-      const fromGeo = from === BAR_INDEX ? null : visualPoints[from];
-      const toGeo = to >= 0 && to < 24 ? visualPoints[to] : null;
+      const fromGeo = from === BAR_INDEX ? null : visualPoints[logicalToVisual(from)];
+      const toGeo = to >= 0 && to < 24 ? visualPoints[logicalToVisual(to)] : null;
 
       let svgStartX: number, svgStartY: number;
       if (from === BAR_INDEX) {

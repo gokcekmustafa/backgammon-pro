@@ -1,6 +1,6 @@
 import type { Point, Rect, PointDirection, PointGeometry, BoardGeometry, Circle } from './types';
 
-export const DEFAULT_BOARD_ASPECT_RATIO = 2.15;
+export const DEFAULT_BOARD_ASPECT_RATIO = 572 / 390;
 export const LEFT_TABLE_RATIO = 0.445;
 export const RIGHT_TABLE_RATIO = 0.445;
 export const BAR_RATIO = 1 - LEFT_TABLE_RATIO - RIGHT_TABLE_RATIO;
@@ -27,7 +27,7 @@ export function createBoardGeometry(boardWidth: number, boardHeight?: number): B
 
   for (let i = 0; i < POINTS_PER_HALF; i++) {
     points.push({
-      index: POINTS_PER_HALF * 2 - 1 - i,
+      index: POINTS_PER_HALF * 2 + i,
       rect: rect(i * pointWidth, 0, pointWidth, halfHeight),
       direction: 'down',
       isTopHalf: true,
@@ -36,7 +36,7 @@ export function createBoardGeometry(boardWidth: number, boardHeight?: number): B
 
   for (let i = 0; i < POINTS_PER_HALF; i++) {
     points.push({
-      index: POINTS_PER_HALF - 1 - i,
+      index: POINTS_PER_HALF * 3 + i,
       rect: rect(rightTableX + i * pointWidth, 0, pointWidth, halfHeight),
       direction: 'down',
       isTopHalf: true,
@@ -45,7 +45,7 @@ export function createBoardGeometry(boardWidth: number, boardHeight?: number): B
 
   for (let i = 0; i < POINTS_PER_HALF; i++) {
     points.push({
-      index: POINTS_PER_HALF * 2 + i,
+      index: POINTS_PER_HALF * 2 - 1 - i,
       rect: rect(i * pointWidth, halfHeight, pointWidth, halfHeight),
       direction: 'up',
       isTopHalf: false,
@@ -54,7 +54,7 @@ export function createBoardGeometry(boardWidth: number, boardHeight?: number): B
 
   for (let i = 0; i < POINTS_PER_HALF; i++) {
     points.push({
-      index: POINTS_PER_HALF * 3 + i,
+      index: POINTS_PER_HALF - 1 - i,
       rect: rect(rightTableX + i * pointWidth, halfHeight, pointWidth, halfHeight),
       direction: 'up',
       isTopHalf: false,
