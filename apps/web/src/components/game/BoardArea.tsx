@@ -46,13 +46,18 @@ function OffArea({
     );
   }
 
+  const isWhite = player === Player.One;
+  const bgImage = isWhite
+    ? 'url(/assets/score-rail-light.png)'
+    : 'url(/assets/score-rail-dark.png)';
+
   return (
     <div
       className="off-area"
       style={{
         width: 58,
         flexShrink: 0,
-        background: 'linear-gradient(180deg, rgba(0,0,0,0.32), rgba(0,0,0,0.5))',
+        background: `${bgImage} left center / 200% 100% no-repeat`,
         border: '1px solid rgba(213,173,117,0.46)',
         borderRadius: 14,
         display: 'flex',

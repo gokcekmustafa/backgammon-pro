@@ -12,8 +12,6 @@ import { Player, BAR_INDEX, BEAR_OFF_INDEX } from '@backgammon/game-engine';
 import type { GameState, Move } from '@backgammon/game-engine';
 import type { PointGeometry } from '@backgammon/board-renderer';
 
-const POINT_COLORS: [string, string] = ['#e8c082', '#8b3a1a'];
-const BOARD_FILL = '#0d421e';
 const LEGAL_MOVE_FILL = 'rgba(255, 240, 200, 0.5)';
 const DRAG_TARGET_FILL = 'rgba(255, 240, 200, 0.25)';
 const MAX_VISIBLE_CHECKERS = 6;
@@ -495,14 +493,14 @@ export default function GameBoard({
   const triangleElements = useMemo(
     () =>
       visualPoints.map((pt) => {
-        const color = pt.index % 2 === 0 ? POINT_COLORS[0] : POINT_COLORS[1];
         const triPoints = getTrianglePoints(pt.rect, pt.direction);
         return (
           <polygon
             key={`tri-${pt.index}`}
             points={trianglePointsToString(triPoints)}
-            fill={color}
-            fillOpacity={0.85}
+            fill="transparent"
+            stroke="rgba(0,0,0,0.06)"
+            strokeWidth={0.5}
           />
         );
       }),
@@ -963,55 +961,43 @@ export default function GameBoard({
       onLostPointerCapture={handleLostPointerCapture}
     >
       <defs>
-        <linearGradient id="frame-base" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#c4954a" />
-          <stop offset="25%" stopColor="#a67b3a" />
-          <stop offset="60%" stopColor="#6b3d12" />
-          <stop offset="100%" stopColor="#3a1f08" />
+        <linearGradient id="frame-base" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#8e4a09" />
+          <stop offset="100%" stopColor="#743807" />
         </linearGradient>
 
-        <linearGradient id="frame-bevel" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.12)" />
-          <stop offset="50%" stopColor="rgba(255,255,255,0.02)" />
-          <stop offset="100%" stopColor="rgba(0,0,0,0.18)" />
+        <linearGradient id="wood-surface" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="rgba(0,0,0,0.12)" />
+          <stop offset="100%" stopColor="rgba(0,0,0,0.22)" />
         </linearGradient>
-
-        <filter id="felt-noise" x="0" y="0" width="100%" height="100%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="4" result="n" />
-          <feColorMatrix type="saturate" values="0" in="n" result="gn" />
-          <feComponentTransfer in="gn" result="soft">
-            <feFuncA type="linear" slope="0.06" />
-          </feComponentTransfer>
-          <feBlend mode="multiply" in="soft" in2="SourceGraphic" />
-        </filter>
 
         <linearGradient id="lighting" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#fff" stopOpacity="0.08" />
+          <stop offset="0%" stopColor="#fff" stopOpacity="0.06" />
           <stop offset="45%" stopColor="#fff" stopOpacity="0" />
           <stop offset="55%" stopColor="#000" stopOpacity="0" />
           <stop offset="100%" stopColor="#000" stopOpacity="0.18" />
         </linearGradient>
 
-        <linearGradient id="tri-light" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.15)" />
-          <stop offset="100%" stopColor="rgba(0,0,0,0.12)" />
-        </linearGradient>
+        <radialGradient id="vignette" cx="50%" cy="50%" r="60%">
+          <stop offset="40%" stopColor="#000" stopOpacity="0" />
+          <stop offset="100%" stopColor="#000" stopOpacity="0.24" />
+        </radialGradient>
 
-        <filter id="shadow-ambient">
-          <feDropShadow dx="0" dy="12" stdDeviation="20" floodColor="#000" floodOpacity="0.3" />
-          <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#000" floodOpacity="0.15" />
+        <filter id="shadow-board">
+          <feDropShadow dx="0" dy="12" stdDeviation="18" floodColor="#000" floodOpacity="0.34" />
+          <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#000" floodOpacity="0.16" />
         </filter>
       </defs>
 
-      {/* Ambient board shadow */}
+      {/* Outer wood frame board shadow */}
       <rect
-        x={-4}
-        y={-4}
-        width={bw + 8}
-        height={bh + 8}
-        rx={18}
+        x={-3}
+        y={-3}
+        width={bw + 6}
+        height={bh + 6}
+        rx={8}
         fill="none"
-        filter="url(#shadow-ambient)"
+        filter="url(#shadow-board)"
         style={{ pointerEvents: 'none' }}
       />
 
@@ -1021,104 +1007,116 @@ export default function GameBoard({
         y="0"
         width={bw}
         height={bh}
-        rx="16"
-        fill="url(#frame-base)"
-        stroke="#1a0e04"
-        strokeWidth={2.5}
-        shapeRendering="crispEdges"
-      />
-
-      {/* Frame bevel overlay */}
-      <rect
-        x="0"
-        y="0"
-        width={bw}
-        height={bh}
-        rx={16}
-        fill="url(#frame-bevel)"
-        style={{ pointerEvents: 'none' }}
-      />
-
-      {/* Inner frame border */}
-      <rect
-        x={4}
-        y={4}
-        width={bw - 8}
-        height={bh - 8}
-        rx={12}
-        fill="none"
-        stroke="#1a0e04"
-        strokeWidth={1}
-        style={{ pointerEvents: 'none' }}
-      />
-
-      {/* Inner bevel highlight */}
-      <rect
-        x={5}
-        y={5}
-        width={bw - 10}
-        height={bh - 10}
-        rx={10}
-        fill="none"
-        stroke="rgba(255,255,255,0.07)"
-        strokeWidth={1}
-        style={{ pointerEvents: 'none' }}
-      />
-
-      {/* Felt board surface */}
-      <rect
-        x={10}
-        y={10}
-        width={bw - 20}
-        height={bh - 20}
         rx="6"
-        fill={BOARD_FILL}
-        filter="url(#felt-noise)"
+        fill="url(#frame-base)"
+        stroke="#5c2c03"
+        strokeWidth={4}
+        shapeRendering="crispEdges"
+        style={{ filter: 'drop-shadow(0 1px 0 rgba(255,240,214,0.28))' }}
       />
+
+      {/* Board surface: wood texture */}
+      <image
+        x={6}
+        y={6}
+        width={bw - 12}
+        height={bh - 12}
+        href="/assets/table-surface.jpg"
+        preserveAspectRatio="xMidYMid slice"
+        style={{ pointerEvents: 'none' }}
+      />
+
+      {/* Board surface darkening overlay */}
+      <rect
+        x={6}
+        y={6}
+        width={bw - 12}
+        height={bh - 12}
+        rx={4}
+        fill="url(#wood-surface)"
+        style={{ pointerEvents: 'none' }}
+      />
+
+      {/* Playing field inner border */}
+      <rect
+        x={6}
+        y={6}
+        width={bw - 12}
+        height={bh - 12}
+        rx={4}
+        fill="none"
+        stroke="#1f130b"
+        strokeWidth={2}
+        style={{ pointerEvents: 'none' }}
+      />
+
       {triangleElements}
 
-      {/* Lighting gradient over the entire board surface */}
+      {/* Lighting gradient over the board */}
       <rect
-        x={10}
-        y={10}
-        width={bw - 20}
-        height={bh - 20}
-        rx={6}
+        x={6}
+        y={6}
+        width={bw - 12}
+        height={bh - 12}
+        rx={4}
         fill="url(#lighting)"
         style={{ pointerEvents: 'none', mixBlendMode: 'overlay' as any }}
       />
 
-      {/* Triangle gradient overlays for depth */}
-      {visualPoints.map((pt) => {
-        const triPts = getTrianglePoints(pt.rect, pt.direction);
-        return (
-          <polygon
-            key={`tri-light-${pt.index}`}
-            points={trianglePointsToString(triPts)}
-            fill="url(#tri-light)"
-            style={{ pointerEvents: 'none', mixBlendMode: 'multiply' }}
-          />
-        );
-      })}
+      {/* Vignette shadow */}
+      <rect
+        x={6}
+        y={6}
+        width={bw - 12}
+        height={bh - 12}
+        rx={4}
+        fill="url(#vignette)"
+        style={{ pointerEvents: 'none' }}
+      />
+
+      {/* Inner highlight */}
+      <rect
+        x={7}
+        y={7}
+        width={bw - 14}
+        height={bh - 14}
+        rx={3}
+        fill="none"
+        stroke="rgba(255,236,206,0.1)"
+        strokeWidth={1}
+        style={{ pointerEvents: 'none' }}
+      />
       {/* Bar background */}
       <rect
         x={geometry.bar.x}
-        y={10}
+        y={8}
         width={geometry.bar.width}
-        height={bh - 20}
-        rx={2}
-        fill="url(#frame-base)"
-        opacity={0.7}
+        height={bh - 16}
+        fill="rgba(0,0,0,0.32)"
       />
       <rect
         x={geometry.bar.x}
-        y={10}
+        y={8}
         width={geometry.bar.width}
-        height={bh - 20}
-        rx={2}
-        fill="none"
-        stroke="#1a0e04"
-        strokeWidth={0.5}
+        height={bh - 16}
+        fill="url(#wood-surface)"
+        style={{ pointerEvents: 'none' }}
+      />
+      <line
+        x1={geometry.bar.x}
+        y1={8}
+        x2={geometry.bar.x}
+        y2={bh - 8}
+        stroke="rgba(0,0,0,0.34)"
+        strokeWidth={1}
+      />
+      <line
+        x1={geometry.bar.x + geometry.bar.width}
+        y1={8}
+        x2={geometry.bar.x + geometry.bar.width}
+        y2={bh - 8}
+        stroke="rgba(0,0,0,0.34)"
+        strokeWidth={1}
       />
       {sourceHighlightElements}
       {pointClickAreas}
