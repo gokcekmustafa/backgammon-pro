@@ -159,7 +159,7 @@ export default function BoardArea() {
   };
 
   return (
-    <div className="flex items-center justify-center w-full max-w-xl mx-auto">
+    <div className="flex items-center justify-center w-full max-w-4xl mx-auto">
       <div className="flex items-stretch gap-2 w-full">
         <OffArea
           player={isFlipped ? Player.Two : Player.One}

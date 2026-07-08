@@ -594,37 +594,30 @@ export default function GameBoard({
         const shadowOffset = 1 + (1 - stackDepth) * 3;
 
         const stoneHref =
-          pt.player === Player.One ? '/assets/stone-light.png' : '/assets/stone-dark.png';
+          pt.player === Player.One ? '/assets/stone-light-cell.png' : '/assets/stone-dark-cell.png';
         els.push(
           <g key={`c-${i}-${j}`} className={gClasses}>
-            <svg
+            <image
               x={pos.cx - size / 2}
               y={pos.cy - size / 2}
               width={size}
               height={size}
-              viewBox="44 0 44 44"
-              style={{ overflow: 'visible' }}
-            >
-              <image
-                width="132"
-                height="132"
-                href={stoneHref}
-                className={isSelected ? 'checker-selected' : 'checker-normal'}
-                style={{
-                  cursor: pt.player === gameState.currentPlayer ? 'grab' : 'default',
-                  transition: 'transform 0.14s ease, box-shadow 0.16s ease',
-                  filter: isSelected
-                    ? `drop-shadow(0 0 3px rgba(251,191,36,0.45)) drop-shadow(0 ${shadowOffset}px ${shadowBlur}px rgba(0,0,0,${shadowOpacity}))`
-                    : `drop-shadow(0 ${shadowOffset}px ${shadowBlur}px rgba(0,0,0,${shadowOpacity}))`,
-                }}
-                onClick={() => {
-                  if (pt.player === gameState.currentPlayer) {
-                    onPointClick(i);
-                  }
-                }}
-                onPointerDown={(e) => handlePointerDown(i, e)}
-              />
-            </svg>
+              href={stoneHref}
+              className={isSelected ? 'checker-selected' : 'checker-normal'}
+              style={{
+                cursor: pt.player === gameState.currentPlayer ? 'grab' : 'default',
+                transition: 'transform 0.14s ease, box-shadow 0.16s ease',
+                filter: isSelected
+                  ? `drop-shadow(0 0 3px rgba(251,191,36,0.45)) drop-shadow(0 ${shadowOffset}px ${shadowBlur}px rgba(0,0,0,${shadowOpacity}))`
+                  : `drop-shadow(0 ${shadowOffset}px ${shadowBlur}px rgba(0,0,0,${shadowOpacity}))`,
+              }}
+              onClick={() => {
+                if (pt.player === gameState.currentPlayer) {
+                  onPointClick(i);
+                }
+              }}
+              onPointerDown={(e) => handlePointerDown(i, e)}
+            />
           </g>,
         );
       }
@@ -719,33 +712,26 @@ export default function GameBoard({
         const shadowOpacity = 0.08 + (1 - stackDepth) * 0.22;
         const shadowOffset = 1 + (1 - stackDepth) * 2;
         els.push(
-          <svg
+          <image
             key={`bar-${player}-${i}`}
             x={barCx - barChipSize / 2}
             y={cy - barChipSize / 2}
             width={barChipSize}
             height={barChipSize}
-            viewBox="44 0 44 44"
-            style={{ overflow: 'visible' }}
-          >
-            <image
-              width="132"
-              height="132"
-              href={stoneHref}
-              className={isBarDragSourceCheck ? 'checker-selected' : 'checker-normal'}
-              style={{
-                cursor: gameState.currentPlayer === player ? 'grab' : 'default',
-                transition: 'transform 0.14s ease',
-                filter: isBarDragSourceCheck
-                  ? `drop-shadow(0 0 3px rgba(251,191,36,0.45)) drop-shadow(0 ${shadowOffset}px ${shadowBlur}px rgba(0,0,0,${shadowOpacity}))`
-                  : `drop-shadow(0 ${shadowOffset}px ${shadowBlur}px rgba(0,0,0,${shadowOpacity}))`,
-              }}
-              onClick={() => {
-                if (gameState.currentPlayer === player) onPointClick(BAR_INDEX);
-              }}
-              onPointerDown={(e) => handlePointerDown(BAR_INDEX, e)}
-            />
-          </svg>,
+            href={stoneHref.replace('.png', '-cell.png')}
+            className={isBarDragSourceCheck ? 'checker-selected' : 'checker-normal'}
+            style={{
+              cursor: gameState.currentPlayer === player ? 'grab' : 'default',
+              transition: 'transform 0.14s ease',
+              filter: isBarDragSourceCheck
+                ? `drop-shadow(0 0 3px rgba(251,191,36,0.45)) drop-shadow(0 ${shadowOffset}px ${shadowBlur}px rgba(0,0,0,${shadowOpacity}))`
+                : `drop-shadow(0 ${shadowOffset}px ${shadowBlur}px rgba(0,0,0,${shadowOpacity}))`,
+            }}
+            onClick={() => {
+              if (gameState.currentPlayer === player) onPointClick(BAR_INDEX);
+            }}
+            onPointerDown={(e) => handlePointerDown(BAR_INDEX, e)}
+          />,
         );
       }
 
@@ -941,23 +927,17 @@ export default function GameBoard({
 
     const size = checkerDiam;
     return (
-      <svg
+      <image
         x={drag.currentX - size / 2}
         y={drag.currentY - size / 2}
         width={size}
         height={size}
-        viewBox="44 0 44 44"
-        style={{ overflow: 'visible', pointerEvents: 'none' }}
-      >
-        <image
-          width="132"
-          height="132"
-          href={stoneHref}
-          style={{
-            filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))',
-          }}
-        />
-      </svg>
+        href={stoneHref.replace('.png', '-cell.png')}
+        style={{
+          pointerEvents: 'none',
+          filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))',
+        }}
+      />
     );
   }, [drag, checkerDiam, gameState]);
 
