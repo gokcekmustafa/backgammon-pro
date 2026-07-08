@@ -213,7 +213,7 @@ describe('createValidator - getLegalMoves (Player One)', () => {
     const moves = validator.getLegalMoves(state);
 
     expect(moves.some((m) => m.from === 11 && m.to === 12)).toBe(false);
-    expect(moves.some((m) => m.from === 16 && m.to === 17)).toBe(false);
+    expect(moves.some((m) => m.from === 16 && m.to === 17)).toBe(true);
   });
 
   it('includes hit moves when landing on a blot', () => {

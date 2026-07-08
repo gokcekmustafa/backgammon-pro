@@ -45,10 +45,10 @@ export function createInitialBoard(): Board {
   board[16] = { player: P.One, count: 3 };
   board[18] = { player: P.One, count: 5 };
   // Player 2: 2 on point 23 (standard 1), 5 on point 12 (standard 12),
-  //           3 on point 17 (standard 7), 5 on point 5 (standard 19)
+  //           3 on point 7 (standard 17), 5 on point 5 (standard 19)
   board[23] = { player: P.Two, count: 2 };
   board[12] = { player: P.Two, count: 5 };
-  board[17] = { player: P.Two, count: 3 };
+  board[7] = { player: P.Two, count: 3 };
   board[5] = { player: P.Two, count: 5 };
   return board;
 }

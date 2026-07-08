@@ -281,10 +281,10 @@ describe('createInitialBoard', () => {
     expect(board[12].count).toBe(5);
   });
 
-  it('places 3 Player Two checkers on point 17 (standard 7)', () => {
+  it('places 3 Player Two checkers on point 7 (standard 17)', () => {
     const board = createInitialBoard();
-    expect(board[17].player).toBe(Player.Two);
-    expect(board[17].count).toBe(3);
+    expect(board[7].player).toBe(Player.Two);
+    expect(board[7].count).toBe(3);
   });
 
   it('places 5 Player Two checkers on point 5 (standard 19)', () => {
